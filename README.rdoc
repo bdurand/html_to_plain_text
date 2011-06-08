@@ -1,0 +1,18 @@
+= HTML To Plain Text
+
+A simple gem that provide code to convert HTML into a plain text alternative. Line breaks from HTML block level elements will be maintained. Lists and tables will also maintain a little bit of formatting.
+
+* Line breaks will be approximated using the generally established default margins for HTML tags (i.e. <p>
+tag generates two line breaks, <div> generates one)
+* Lists items will be numbered or bulleted with an asterisk
+* <br> tags will add line breaks
+* <hr> tags will add a string of hyphens to serve as a horizontal rule
+* <table> elements will enclosed in "|" delimiters
+* <a> tags will have the href URL appended to the text in parentheses
+* Formatting tags like <strong> or <b> will be stripped
+* Formatting inside <pre> or <plaintext> elements will be honored
+* Code-like tags like <script> or <style> will be stripped
+
+== Usage
+
+HtmlToPlainText.plain_text(html)
