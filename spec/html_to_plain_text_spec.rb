@@ -90,4 +90,16 @@ describe HtmlToPlainText do
     html = "This &amp; th&#97;t"
     HtmlToPlainText.plain_text(html).should == "This & that"
   end
+  
+  it "should handle nil" do
+    HtmlToPlainText.plain_text(nil).should == nil
+  end
+  
+  it "should handle empty text" do
+    HtmlToPlainText.plain_text("").should == ""
+  end
+  
+  it "should handle non-html text" do
+    HtmlToPlainText.plain_text("test").should == "test"
+  end
 end

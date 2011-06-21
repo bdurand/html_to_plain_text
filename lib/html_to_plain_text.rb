@@ -18,6 +18,7 @@ module HtmlToPlainText
   LI = "li".freeze
   NUMBERS = ["1", "a"]
   ABSOLUTE_URL_PATTERN = /^[a-z]+:\/\/[a-z0-9]/i
+  HTML_PATTERN = /[<&]/
   
   # Helper instance method for converting HTML into plain text. This method simply calls HtmlToPlainText.plain_text.
   def plain_text(html)
@@ -27,7 +28,8 @@ module HtmlToPlainText
   class << self
     # Convert some HTML into a plain text approximation.
     def plain_text(html)
-      return if html.nil? || html.empty?
+      return nil if html.nil?
+      return html.dup unless html.match(HTML_PATTERN)
       body = Nokogiri::HTML::Document.parse(html).css("body").first
       return unless body
       convert_node_to_plain_text(body).strip.gsub(/\r(\n?)/, "\n")
