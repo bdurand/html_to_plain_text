@@ -2,22 +2,22 @@ require 'spec_helper'
 
 describe HtmlToPlainText do
   it "should format paragraph tags" do
-    html = "<h1>Test</h1><h2>More Test</h2><p>This is a test</p>"
+    html = "<h1>Test</h1><h2>More Test</h2>\t \t<p>\n\tThis is a test\n</p>"
     HtmlToPlainText.plain_text(html).should == "Test\n\nMore Test\n\nThis is a test"
   end
   
   it "should format block tags" do
-    html = "<div>Test</div><div>More Test<div>This is a test</div></div>"
+    html = "<div>Test</div><div>More Test<div>\t This is a test\t </div></div>"
     HtmlToPlainText.plain_text(html).should == "Test\nMore Test\nThis is a test"
   end
   
   it "should format <br> tags" do
-    html = "<div>Test</div><br><div>More Test<br />This is a test"
+    html = "<div>Test</div><br><div>More Test \t <br />This is a test"
     HtmlToPlainText.plain_text(html).should == "Test\n\nMore Test\nThis is a test"
   end
   
   it "should format <hr> tags" do
-    html = "<div>Test</div><hr><div>More Test<hr />This is a test"
+    html = "<div>Test</div><hr><div>More Test \t <hr />This is a test"
     HtmlToPlainText.plain_text(html).should == "Test\n-------------------------------\nMore Test\n-------------------------------\nThis is a test"
   end
   

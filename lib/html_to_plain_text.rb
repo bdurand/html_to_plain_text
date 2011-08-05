@@ -16,9 +16,10 @@ module HtmlToPlainText
   OL = "ol".freeze
   UL = "ul".freeze
   LI = "li".freeze
-  NUMBERS = ["1", "a"]
-  ABSOLUTE_URL_PATTERN = /^[a-z]+:\/\/[a-z0-9]/i
-  HTML_PATTERN = /[<&]/
+  NUMBERS = ["1", "a"].freeze
+  ABSOLUTE_URL_PATTERN = /^[a-z]+:\/\/[a-z0-9]/i.freeze
+  HTML_PATTERN = /[<&]/.freeze
+  TRAILING_WHITESPACE = /[ \t]+$/.freeze
   
   # Helper instance method for converting HTML into plain text. This method simply calls HtmlToPlainText.plain_text.
   def plain_text(html)
@@ -63,8 +64,10 @@ module HtmlToPlainText
           convert_node_to_plain_text(node, out, child_options(node, options))
           
           if node.name == BR
+            out.sub!(TRAILING_WHITESPACE, '')
             out << "\n"
           elsif node.name == HR
+            out.sub!(TRAILING_WHITESPACE, '')
             out << "\n" unless out.end_with?("\n")
             out << "-------------------------------\n"
           elsif node.name == TD || node.name == TH
@@ -104,7 +107,7 @@ module HtmlToPlainText
     # Add double line breaks between paragraph elements. If line breaks already exist,
     # new ones will only be added to get to two.
     def append_paragraph_breaks(out)
-      out.chomp!(" ")
+      out.sub!(TRAILING_WHITESPACE, '')
       if out.end_with?("\n")
         out << "\n" unless out.end_with?("\n\n")
       else
@@ -115,7 +118,7 @@ module HtmlToPlainText
     # Add a single line break between block elements. If a line break already exists,
     # none will be added.
     def append_block_breaks(out)
-      out.chomp!(" ")
+      out.sub!(TRAILING_WHITESPACE, '')
       out << "\n" unless out.end_with?("\n")
     end
     
