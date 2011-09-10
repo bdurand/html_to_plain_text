@@ -16,10 +16,14 @@ module HtmlToPlainText
   OL = "ol".freeze
   UL = "ul".freeze
   LI = "li".freeze
+  A = "a".freeze
   NUMBERS = ["1", "a"].freeze
   ABSOLUTE_URL_PATTERN = /^[a-z]+:\/\/[a-z0-9]/i.freeze
   HTML_PATTERN = /[<&]/.freeze
   TRAILING_WHITESPACE = /[ \t]+$/.freeze
+  BODY_TAG_XPATH = "/html/body".freeze
+  CARRIDGE_RETURN_PATTERN = /\r(\n?)/.freeze
+  LINE_BREAK_PATTERN = /[\n\r]/.freeze
   
   # Helper instance method for converting HTML into plain text. This method simply calls HtmlToPlainText.plain_text.
   def plain_text(html)
@@ -31,9 +35,9 @@ module HtmlToPlainText
     def plain_text(html)
       return nil if html.nil?
       return html.dup unless html.match(HTML_PATTERN)
-      body = Nokogiri::HTML::Document.parse(html).css("body").first
+      body = Nokogiri::HTML::Document.parse(html).xpath(BODY_TAG_XPATH).first
       return unless body
-      convert_node_to_plain_text(body).strip.gsub(/\r(\n?)/, "\n")
+      convert_node_to_plain_text(body).strip.gsub(CARRIDGE_RETURN_PATTERN, "\n")
     end
     
     private
@@ -54,7 +58,7 @@ module HtmlToPlainText
         if node.text? || node.cdata?
           text = node.text
           unless options[:pre]
-            text = node.text.gsub(/[\n\r]/, " ").squeeze(" ")
+            text = node.text.gsub(LINE_BREAK_PATTERN, " ").squeeze(" ")
             text.lstrip! if WHITESPACE.include?(out[-1, 1])
           end
           out << text
@@ -72,7 +76,7 @@ module HtmlToPlainText
             out << "-------------------------------\n"
           elsif node.name == TD || node.name == TH
             out << " | "
-          elsif node.name == "a"
+          elsif node.name == A
             href = node["href"]
             if href && href.match(ABSOLUTE_URL_PATTERN) && node.text.match(/\S/)
               out << " (#{href}) "
