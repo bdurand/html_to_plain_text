@@ -1,3 +1,5 @@
+# encoding: UTF-8
+
 require 'spec_helper'
 
 describe HtmlToPlainText do
@@ -101,5 +103,10 @@ describe HtmlToPlainText do
   
   it "should handle non-html text" do
     HtmlToPlainText.plain_text("test").should == "test"
+  end
+  
+  it "should handle UTF-8 characters" do
+    html = "<p>ümlaut</p>"
+    HtmlToPlainText.plain_text(html).should == "ümlaut"
   end
 end
