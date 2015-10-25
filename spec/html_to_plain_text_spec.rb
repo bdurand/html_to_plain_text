@@ -1,112 +1,111 @@
 # encoding: UTF-8
-
 require 'spec_helper'
 
-describe HtmlToPlainText do
-  it "should format paragraph tags" do
+RSpec.describe HtmlToPlainText do
+  it "formats paragraph tags" do
     html = "<h1>Test</h1><h2>More Test</h2>\t \t<p>\n\tThis is a test\n</p>"
-    HtmlToPlainText.plain_text(html).should == "Test\n\nMore Test\n\nThis is a test"
+    expect(HtmlToPlainText.plain_text(html)).to eq "Test\n\nMore Test\n\nThis is a test"
   end
-  
-  it "should format block tags" do
+
+  it "formats block tags" do
     html = "<div>Test</div><div>More Test<div>\t This is a test\t </div></div>"
-    HtmlToPlainText.plain_text(html).should == "Test\nMore Test\nThis is a test"
+    expect(HtmlToPlainText.plain_text(html)).to eq "Test\nMore Test\nThis is a test"
   end
-  
-  it "should format <br> tags" do
+
+  it "formats <br> tags" do
     html = "<div>Test</div><br><div>More Test \t <br />This is a test"
-    HtmlToPlainText.plain_text(html).should == "Test\n\nMore Test\nThis is a test"
+    expect(HtmlToPlainText.plain_text(html)).to eq "Test\n\nMore Test\nThis is a test"
   end
-  
-  it "should format <hr> tags" do
+
+  it "formats <hr> tags" do
     html = "<div>Test</div><hr><div>More Test \t <hr />This is a test"
-    HtmlToPlainText.plain_text(html).should == "Test\n-------------------------------\nMore Test\n-------------------------------\nThis is a test"
+    expect(HtmlToPlainText.plain_text(html)).to eq "Test\n-------------------------------\nMore Test\n-------------------------------\nThis is a test"
   end
-  
-  it "should keep text formatting in <pre> tag blocks" do
+
+  it "keeps text formatting in <pre> tag blocks" do
     html = "<div>This \n is a \ntest</div><pre>with\n  pre tags</pre>end"
-    HtmlToPlainText.plain_text(html).should == "This is a test\nwith\n  pre tags\nend"
+    expect(HtmlToPlainText.plain_text(html)).to eq "This is a test\nwith\n  pre tags\nend"
   end
-  
-  it "should remove inline formatting tags" do
+
+  it "removes inline formatting tags" do
     html = "This is <strong>so</strong> cool. I<em> mean <em>it."
-    HtmlToPlainText.plain_text(html).should == "This is so cool. I mean it."
+    expect(HtmlToPlainText.plain_text(html)).to eq "This is so cool. I mean it."
   end
-  
-  it "should remove script, style, object, applet, and iframe tags" do
+
+  it "removes script, style, object, applet, and iframe tags" do
     html = "script <script>do_something</script> style <style>css</style> object <object>config</object> applet <applet>config</applet> iframe <iframe>config</iframe>"
-    HtmlToPlainText.plain_text(html).should == "script style object applet iframe"
+    expect(HtmlToPlainText.plain_text(html)).to eq "script style object applet iframe"
   end
-  
-  it "should handle plaintext tags" do
+
+  it "handles plaintext tags" do
     html = "<div>my\nhtml</div><plaintext>my\n text"
-    HtmlToPlainText.plain_text(html).should == "my html\nmy\n text"
+    expect(HtmlToPlainText.plain_text(html)).to eq "my html\nmy\n text"
   end
-  
-  it "should not add extraneous spaces or line breaks" do
+
+  it "does not add extraneous spaces or line breaks" do
     html = "this<p><p>  is   \n    \n pretty bad lo<em>oking htm</em>l!"
-    HtmlToPlainText.plain_text(html).should == "this\n\nis pretty bad looking html!"
+    expect(HtmlToPlainText.plain_text(html)).to eq "this\n\nis pretty bad looking html!"
   end
-  
-  it "should format bullet lists" do
+
+  it "formats bullet lists" do
     html = "List<ul><li>one</li><li>two<ul><li>a</li><li>b</li></ul></li><li>three</li></ul>"
-    HtmlToPlainText.plain_text(html).should == "List\n\n* one\n* two\n\n** a\n** b\n\n* three"
+    expect(HtmlToPlainText.plain_text(html)).to eq "List\n\n* one\n* two\n\n** a\n** b\n\n* three"
   end
-  
-  it "should format numbered lists" do
+
+  it "formats numbered lists" do
     html = "List<ol><li>one</li><li>two<ol><li>a</li><li>b</li></ol></li><li>three</li></ol>"
-    HtmlToPlainText.plain_text(html).should == "List\n\n1. one\n2. two\n\na. a\nb. b\n\n3. three"
+    expect(HtmlToPlainText.plain_text(html)).to eq "List\n\n1. one\n2. two\n\na. a\nb. b\n\n3. three"
   end
-  
-  it "should format a table" do
+
+  it "formats a table" do
     html = "Table<table><tr><th>Col 1</th><th>Col 2</th></tr><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></table>"
-    HtmlToPlainText.plain_text(html).should == "Table\n\n| Col 1 | Col 2 |\n| 1 | 2 |\n| 3 | 4 |"
+    expect(HtmlToPlainText.plain_text(html)).to eq "Table\n\n| Col 1 | Col 2 |\n| 1 | 2 |\n| 3 | 4 |"
   end
-  
-  it "should ignore inline tags without bodies" do
+
+  it "ignores inline tags without bodies" do
     html = "This is an <img src=\"/image\"> image"
-    HtmlToPlainText.plain_text(html).should == "This is an image"
+    expect(HtmlToPlainText.plain_text(html)).to eq "This is an image"
   end
-  
-  it "should ignore comments" do
+
+  it "ignores comments" do
     html = "This is <!-- html comment here --> html"
-    HtmlToPlainText.plain_text(html).should == "This is html"
+    expect(HtmlToPlainText.plain_text(html)).to eq "This is html"
   end
-  
-  it "should unencode entities" do
+
+  it "unencodes entities" do
     html = "High &amp; Low"
-    HtmlToPlainText.plain_text(html).should == "High & Low"
+    expect(HtmlToPlainText.plain_text(html)).to eq "High & Low"
   end
-  
-  it "should normalize the line breaks" do
+
+  it "normalizes the line breaks" do
     html = "<pre>These are\rreturn\r\nlines</pre>"
-    HtmlToPlainText.plain_text(html).should == "These are\nreturn\nlines"
+    expect(HtmlToPlainText.plain_text(html)).to eq "These are\nreturn\nlines"
   end
-  
-  it "should include absolute link URLs" do
+
+  it "includes absolute link URLs" do
     html = "<a name='links'>Links</a> <a href='/test'>partial</a> <a href='http://example.com/test'>full</a> test<a href='http://example.com/test2'> <img src='test'> </a>"
-    HtmlToPlainText.plain_text(html).should == "Links partial full (http://example.com/test) test"
+    expect(HtmlToPlainText.plain_text(html)).to eq "Links partial full (http://example.com/test) test"
   end
-  
-  it "should unescape entities" do
+
+  it "unescapes entities" do
     html = "This &amp; th&#97;t"
-    HtmlToPlainText.plain_text(html).should == "This & that"
+    expect(HtmlToPlainText.plain_text(html)).to eq "This & that"
   end
-  
-  it "should handle nil" do
-    HtmlToPlainText.plain_text(nil).should == nil
+
+  it "handles nil" do
+    expect(HtmlToPlainText.plain_text(nil)).to eq nil
   end
-  
-  it "should handle empty text" do
-    HtmlToPlainText.plain_text("").should == ""
+
+  it "handles empty text" do
+    expect(HtmlToPlainText.plain_text((""))).to eq ""
   end
-  
-  it "should handle non-html text" do
-    HtmlToPlainText.plain_text("test").should == "test"
+
+  it "handles non-html text" do
+    expect(HtmlToPlainText.plain_text(("test"))).to eq "test"
   end
-  
-  it "should handle UTF-8 characters" do
+
+  it "handles UTF-8 characters" do
     html = "<p>ümlaut</p>"
-    HtmlToPlainText.plain_text(html).should == "ümlaut"
+    expect(HtmlToPlainText.plain_text(html)).to eq "ümlaut"
   end
 end
