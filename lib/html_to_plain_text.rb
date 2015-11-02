@@ -24,41 +24,48 @@ module HtmlToPlainText
   BODY_TAG_XPATH = "/html/body".freeze
   CARRIDGE_RETURN_PATTERN = /\r(\n?)/.freeze
   LINE_BREAK_PATTERN = /[\n\r]/.freeze
-  
+  NON_PROTOCOL_PATTERN = /:\/?\/?(.*)/.freeze
+  NOT_WHITESPACE_PATTERN = /\S/.freeze
+  SPACE = " ".freeze
+  EMPTY = "".freeze
+  NEWLINE = "\n".freeze
+  HREF = "href".freeze
+
   # Helper instance method for converting HTML into plain text. This method simply calls HtmlToPlainText.plain_text.
   def plain_text(html)
     HtmlToPlainText.plain_text(html)
   end
-  
+
   class << self
     # Convert some HTML into a plain text approximation.
+
     def plain_text(html)
       return nil if html.nil?
-      return html.dup unless html.match(HTML_PATTERN)
+      return html.dup unless html =~ HTML_PATTERN
       body = Nokogiri::HTML::Document.parse(html).xpath(BODY_TAG_XPATH).first
       return unless body
-      convert_node_to_plain_text(body).strip.gsub(CARRIDGE_RETURN_PATTERN, "\n")
+      convert_node_to_plain_text(body).strip.gsub(CARRIDGE_RETURN_PATTERN, NEWLINE)
     end
-    
+
     private
-    
+
     # Convert an HTML node to plain text. This method is called recursively with the output and
     # formatting options for special tags.
-    def convert_node_to_plain_text(parent, out = "", options = {})
+    def convert_node_to_plain_text(parent, out = '', options = {})
       if PARAGRAPH_TAGS.include?(parent.name)
         append_paragraph_breaks(out)
       elsif BLOCK_TAGS.include?(parent.name)
         append_block_breaks(out)
       end
-      
+
       format_list_item(out, options) if parent.name == LI
       out << "| " if parent.name == TR
-      
+
       parent.children.each do |node|
         if node.text? || node.cdata?
           text = node.text
           unless options[:pre]
-            text = node.text.gsub(LINE_BREAK_PATTERN, " ").squeeze(" ")
+            text = node.text.gsub(LINE_BREAK_PATTERN, SPACE).squeeze(SPACE)
             text.lstrip! if WHITESPACE.include?(out[-1, 1])
           end
           out << text
@@ -66,19 +73,22 @@ module HtmlToPlainText
           out << node.text
         elsif node.element? && !IGNORE_TAGS.include?(node.name)
           convert_node_to_plain_text(node, out, child_options(node, options))
-          
+
           if node.name == BR
-            out.sub!(TRAILING_WHITESPACE, '')
-            out << "\n"
+            out.sub!(TRAILING_WHITESPACE, EMPTY)
+            out << NEWLINE
           elsif node.name == HR
-            out.sub!(TRAILING_WHITESPACE, '')
-            out << "\n" unless out.end_with?("\n")
+            out.sub!(TRAILING_WHITESPACE, EMPTY)
+            out << NEWLINE unless out.end_with?(NEWLINE)
             out << "-------------------------------\n"
           elsif node.name == TD || node.name == TH
             out << " | "
           elsif node.name == A
-            href = node["href"]
-            if href && href.match(ABSOLUTE_URL_PATTERN) && node.text.match(/\S/)
+            href = node[HREF]
+            if href &&
+                href =~ ABSOLUTE_URL_PATTERN &&
+                node.text =~ NOT_WHITESPACE_PATTERN &&
+                node.text != href[NON_PROTOCOL_PATTERN, 1] # use only text for <a href="mailto:a@b.com">a@b.com</a>
               out << " (#{href}) "
             end
           elsif PARAGRAPH_TAGS.include?(node.name)
@@ -90,7 +100,7 @@ module HtmlToPlainText
       end
       out
     end
-    
+
     # Set formatting options that will be passed to child elements for a tag.
     def child_options(node, options)
       if node.name == UL
@@ -107,25 +117,25 @@ module HtmlToPlainText
         options
       end
     end
-    
+
     # Add double line breaks between paragraph elements. If line breaks already exist,
     # new ones will only be added to get to two.
     def append_paragraph_breaks(out)
-      out.sub!(TRAILING_WHITESPACE, '')
-      if out.end_with?("\n")
-        out << "\n" unless out.end_with?("\n\n")
+      out.sub!(TRAILING_WHITESPACE, EMPTY)
+      if out.end_with?(NEWLINE)
+        out << NEWLINE unless out.end_with?("\n\n")
       else
         out << "\n\n"
       end
     end
-    
+
     # Add a single line break between block elements. If a line break already exists,
     # none will be added.
     def append_block_breaks(out)
-      out.sub!(TRAILING_WHITESPACE, '')
-      out << "\n" unless out.end_with?("\n")
+      out.sub!(TRAILING_WHITESPACE, EMPTY)
+      out << NEWLINE unless out.end_with?(NEWLINE)
     end
-    
+
     # Add an appropriate bullet or number to a list element.
     def format_list_item(out, options)
       if options[:list] == :ul
