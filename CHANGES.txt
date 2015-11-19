@@ -1,3 +1,7 @@
+1.0.4
+
+Small tweak to outputing link URLs when they don't make sense.
+
 1.0.3
 
 * improve performance slightly by replacing runtime strings with constants
