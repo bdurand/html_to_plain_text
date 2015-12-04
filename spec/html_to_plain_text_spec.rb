@@ -61,9 +61,16 @@ RSpec.describe HtmlToPlainText do
     expect(text(html)).to eq "List\n\n1. one\n2. two\n\na. a\nb. b\n\n3. three"
   end
 
-  it "formats a table" do
-    html = "Table<table><tr><th>Col 1</th><th>Col 2</th></tr><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></table>"
-    expect(text(html)).to eq "Table\n\n| Col 1 | Col 2 |\n| 1 | 2 |\n| 3 | 4 |"
+  describe "tables" do
+    it "formats a simgple table" do
+      html = "Table<table border='1'><tr><th>Col 1</th><th>Col 2</th></tr><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></table>"
+      expect(text(html)).to eq "Table\n\n| Col 1 | Col 2 |\n| 1 | 2 |\n| 3 | 4 |"
+    end
+
+    it "does not add bars to a layout table" do
+      html = "Table<table border='0'><tr><th>Col 1</th><th>Col 2</th></tr><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></table>"
+      expect(text(html)).to eq "Table\n\nCol 1 Col 2\n1 2\n3 4"
+    end
   end
 
   it "ignores inline tags without bodies" do
@@ -119,7 +126,6 @@ RSpec.describe HtmlToPlainText do
       expect(text("<a href='http://example.com/test2'> <img src='test'> </a>")).to eq ""
     end
   end
-
 
   it "unescapes entities" do
     html = "This &amp; th&#97;t"
