@@ -17,6 +17,7 @@ module HtmlToPlainText
   UL = "ul".freeze
   LI = "li".freeze
   A = "a".freeze
+  TABLE = "table".freeze
   NUMBERS = ["1", "a"].freeze
   ABSOLUTE_URL_PATTERN = /^[a-z]+:\/\/[a-z0-9]/i.freeze
   HTML_PATTERN = /[<&]/.freeze
@@ -30,6 +31,7 @@ module HtmlToPlainText
   EMPTY = "".freeze
   NEWLINE = "\n".freeze
   HREF = "href".freeze
+  TABLE_SEPARATOR = " | ".freeze
 
   # Helper instance method for converting HTML into plain text. This method simply calls HtmlToPlainText.plain_text.
   def plain_text(html)
@@ -59,7 +61,7 @@ module HtmlToPlainText
       end
 
       format_list_item(out, options) if parent.name == LI
-      out << "| " if parent.name == TR
+      out << "| " if parent.name == TR && data_table?(parent.parent)
 
       parent.children.each do |node|
         if node.text? || node.cdata?
@@ -82,7 +84,7 @@ module HtmlToPlainText
             out << NEWLINE unless out.end_with?(NEWLINE)
             out << "-------------------------------\n"
           elsif node.name == TD || node.name == TH
-            out << " | "
+            out << (data_table?(parent.parent) ? TABLE_SEPARATOR : SPACE)
           elsif node.name == A
             href = node[HREF]
             if href &&
@@ -146,6 +148,10 @@ module HtmlToPlainText
         options[:number] = number.next
         out << "#{number}. "
       end
+    end
+
+    def data_table?(table)
+      table.attributes['border'].to_s.to_i > 0
     end
   end
 end
