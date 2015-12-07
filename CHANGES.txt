@@ -1,3 +1,7 @@
+1.0.5
+
+Only add pipes on tables if border attributes set to non-zero value.
+
 1.0.4
 
 Small tweak to outputing link URLs when they don't make sense.

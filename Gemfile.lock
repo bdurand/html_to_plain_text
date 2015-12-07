@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    html_to_plain_text (1.0.4)
+    html_to_plain_text (1.0.5)
       nokogiri (>= 1.4.0)
 
 GEM
