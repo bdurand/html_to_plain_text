@@ -91,6 +91,7 @@ module HtmlToPlainText
                 href =~ ABSOLUTE_URL_PATTERN &&
                 node.text =~ NOT_WHITESPACE_PATTERN &&
                 node.text != href &&
+                node.text.strip != href &&
                 node.text != href[NON_PROTOCOL_PATTERN, 1] # use only text for <a href="mailto:a@b.com">a@b.com</a>
               out << " (#{href}) "
             end

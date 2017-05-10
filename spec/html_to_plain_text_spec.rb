@@ -112,6 +112,15 @@ RSpec.describe HtmlToPlainText do
       expect(text(html)).to eq "http://example.com"
     end
 
+    it "only uses the name for exact duplicates with whitespace" do
+      html = <<-HTML
+      <a href='http://example.com'>
+        http://example.com
+      </a>
+      HTML
+      expect(text(html)).to eq "http://example.com"
+    end
+
     it "only uses the name for close duplicates" do
       html = "<a href='http://example.com'>example.com</a>"
       expect(text(html)).to eq "example.com"
