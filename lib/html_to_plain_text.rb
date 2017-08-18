@@ -23,7 +23,7 @@ module HtmlToPlainText
   HTML_PATTERN = /[<&]/.freeze
   TRAILING_WHITESPACE = /[ \t]+$/.freeze
   BODY_TAG_XPATH = "/html/body".freeze
-  CARRIAGE_RETURN_PATTERN = /\r(\n?)/.freeze
+  CARRIAGE_RETURN_PATTERN = /\r\n?/.freeze
   LINE_BREAK_PATTERN = /[\n\r]/.freeze
   NON_PROTOCOL_PATTERN = /:\/?\/?(.*)/.freeze
   NOT_WHITESPACE_PATTERN = /\S/.freeze
@@ -87,12 +87,13 @@ module HtmlToPlainText
             out << (data_table?(parent.parent) ? TABLE_SEPARATOR : SPACE)
           elsif node.name == A
             href = node[HREF]
-            if href &&
-                href =~ ABSOLUTE_URL_PATTERN &&
-                node.text =~ NOT_WHITESPACE_PATTERN &&
-                node.text != href &&
-                node.text != href[NON_PROTOCOL_PATTERN, 1] # use only text for <a href="mailto:a@b.com">a@b.com</a>
-              out << " (#{href}) "
+            if href && href =~ ABSOLUTE_URL_PATTERN
+              text = node.text.strip
+              if text.size > 0 &&
+                   text != href &&
+                   text != href[NON_PROTOCOL_PATTERN, 1] # use only text for <a href="mailto:a@b.com">a@b.com</a>
+                out << " (#{href}) "
+              end
             end
           elsif PARAGRAPH_TAGS.include?(node.name)
             append_paragraph_breaks(out)
