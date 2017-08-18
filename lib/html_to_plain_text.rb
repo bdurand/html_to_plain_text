@@ -21,12 +21,13 @@ module HtmlToPlainText
   NUMBERS = ["1", "a"].freeze
   ABSOLUTE_URL_PATTERN = /^[a-z]+:\/\/[a-z0-9]/i.freeze
   HTML_PATTERN = /[<&]/.freeze
-  TRAILING_WHITESPACE = /[ \t]+$/.freeze
+  TRAILING_WHITESPACE = /[[:blank:]]+$/.freeze
   BODY_TAG_XPATH = "/html/body".freeze
   CARRIAGE_RETURN_PATTERN = /\r\n?/.freeze
   LINE_BREAK_PATTERN = /[\n\r]/.freeze
   NON_PROTOCOL_PATTERN = /:\/?\/?(.*)/.freeze
-  NOT_WHITESPACE_PATTERN = /\S/.freeze
+  ALL_WHITESPACE_PATTERN = /[[:space:]]+/.freeze
+  NOT_WHITESPACE_PATTERN = /[^[:space:]]/.freeze
   SPACE = " ".freeze
   EMPTY = "".freeze
   NEWLINE = "\n".freeze
@@ -68,7 +69,7 @@ module HtmlToPlainText
         if node.text? || node.cdata?
           text = node.text
           unless options[:pre]
-            text = node.text.gsub(LINE_BREAK_PATTERN, SPACE).squeeze(SPACE)
+            text.gsub!(ALL_WHITESPACE_PATTERN, SPACE)
             text.lstrip! if WHITESPACE.include?(out[-1, 1])
           end
           out << text
@@ -89,7 +90,9 @@ module HtmlToPlainText
           elsif node.name == A && options[:show_links]
             href = node[HREF]
             if href && href =~ ABSOLUTE_URL_PATTERN
-              text = node.text.strip
+              text = node.text
+              text.gsub!(ALL_WHITESPACE_PATTERN, SPACE)
+              text.strip!
               if text.size > 0 &&
                    text != href &&
                    text != href[NON_PROTOCOL_PATTERN, 1] # use only text for <a href="mailto:a@b.com">a@b.com</a>
