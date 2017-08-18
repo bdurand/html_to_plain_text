@@ -23,7 +23,7 @@ module HtmlToPlainText
   HTML_PATTERN = /[<&]/.freeze
   TRAILING_WHITESPACE = /[ \t]+$/.freeze
   BODY_TAG_XPATH = "/html/body".freeze
-  CARRIDGE_RETURN_PATTERN = /\r(\n?)/.freeze
+  CARRIAGE_RETURN_PATTERN = /\r(\n?)/.freeze
   LINE_BREAK_PATTERN = /[\n\r]/.freeze
   NON_PROTOCOL_PATTERN = /:\/?\/?(.*)/.freeze
   NOT_WHITESPACE_PATTERN = /\S/.freeze
@@ -46,7 +46,7 @@ module HtmlToPlainText
       return html.dup unless html =~ HTML_PATTERN
       body = Nokogiri::HTML::Document.parse(html).xpath(BODY_TAG_XPATH).first
       return unless body
-      convert_node_to_plain_text(body).strip.gsub(CARRIDGE_RETURN_PATTERN, NEWLINE)
+      convert_node_to_plain_text(body).strip.gsub(CARRIAGE_RETURN_PATTERN, NEWLINE)
     end
 
     private
