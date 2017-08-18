@@ -2,7 +2,7 @@ require 'nokogiri'
 
 # The main method on this module +plain_text+ will convert a string of HTML to a plain text approximation.
 module HtmlToPlainText
-  IGNORE_TAGS = %w(script style object applet iframe).inject({}){|h, t| h[t] = true; h}.freeze
+  IGNORE_TAGS = %w(script noscript style object applet iframe).inject({}){|h, t| h[t] = true; h}.freeze
   PARAGRAPH_TAGS = %w(p h1 h2 h3 h4 h5 h6 table ol ul dl dd blockquote dialog figure aside section).inject({}){|h, t| h[t] = true; h}.freeze
   BLOCK_TAGS = %w(div address li dt center del article header header footer nav pre legend tr).inject({}){|h, t| h[t] = true; h}.freeze
   WHITESPACE = [" ", "\n", "\r"].freeze
