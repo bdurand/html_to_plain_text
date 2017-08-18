@@ -41,19 +41,20 @@ module HtmlToPlainText
   class << self
     # Convert some HTML into a plain text approximation.
 
-    def plain_text(html)
+    def plain_text(html, options = {})
       return nil if html.nil?
       return html.dup unless html =~ HTML_PATTERN
       body = Nokogiri::HTML::Document.parse(html).xpath(BODY_TAG_XPATH).first
       return unless body
-      convert_node_to_plain_text(body).strip.gsub(CARRIAGE_RETURN_PATTERN, NEWLINE)
+      options = { show_links: true }.merge(options)
+      convert_node_to_plain_text(body, '', options).strip.gsub(CARRIAGE_RETURN_PATTERN, NEWLINE)
     end
 
     private
 
     # Convert an HTML node to plain text. This method is called recursively with the output and
     # formatting options for special tags.
-    def convert_node_to_plain_text(parent, out = '', options = {})
+    def convert_node_to_plain_text(parent, out, options = {})
       if PARAGRAPH_TAGS.include?(parent.name)
         append_paragraph_breaks(out)
       elsif BLOCK_TAGS.include?(parent.name)
@@ -85,7 +86,7 @@ module HtmlToPlainText
             out << "-------------------------------\n"
           elsif node.name == TD || node.name == TH
             out << (data_table?(parent.parent) ? TABLE_SEPARATOR : SPACE)
-          elsif node.name == A
+          elsif node.name == A && options[:show_links]
             href = node[HREF]
             if href && href =~ ABSOLUTE_URL_PATTERN
               text = node.text.strip
