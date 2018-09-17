@@ -32,6 +32,13 @@ module HtmlToPlainText
   NEWLINE = "\n".freeze
   HREF = "href".freeze
   TABLE_SEPARATOR = " | ".freeze
+  NON_BREAKING_SPACE = Nokogiri::HTML("&nbsp;").text.freeze
+  LEFT_SINGLE_QUOTE = "‘".freeze
+  RIGHT_SINGLE_QUOTE = "’".freeze
+  APOSTROPHE = "'".freeze
+  LEFT_DOUBLE_QUOTE = "“".freeze
+  RIGHT_DOUBLE_QUOTE = "”".freeze
+  QUOTE = '"'.freeze
 
   # Helper instance method for converting HTML into plain text. This method simply calls HtmlToPlainText.plain_text.
   def plain_text(html)
@@ -60,19 +67,28 @@ module HtmlToPlainText
         append_block_breaks(out)
       end
 
+
       format_list_item(out, options) if parent.name == LI
       out << "| " if parent.name == TR && data_table?(parent.parent)
 
       parent.children.each do |node|
         if node.text? || node.cdata?
-          text = node.text
+          text = node.text.gsub(NON_BREAKING_SPACE, EMPTY)
+          text = text.gsub(/#{LEFT_SINGLE_QUOTE}|#{RIGHT_SINGLE_QUOTE}/, APOSTROPHE)
+          text = text.gsub(/#{LEFT_DOUBLE_QUOTE}|#{RIGHT_DOUBLE_QUOTE}/, QUOTE)
           unless options[:pre]
             text = node.text.gsub(LINE_BREAK_PATTERN, SPACE).squeeze(SPACE)
+            text = text.gsub(NON_BREAKING_SPACE, EMPTY)
+            text = text.gsub(/#{LEFT_SINGLE_QUOTE}|#{RIGHT_SINGLE_QUOTE}/, APOSTROPHE)
+            text = text.gsub(/#{LEFT_DOUBLE_QUOTE}|#{RIGHT_DOUBLE_QUOTE}/, QUOTE)
             text.lstrip! if WHITESPACE.include?(out[-1, 1])
           end
           out << text
         elsif node.name == PLAINTEXT
-          out << node.text
+          text = node.text.gsub(NON_BREAKING_SPACE, EMPTY)
+          text = text.gsub(/#{LEFT_SINGLE_QUOTE}|#{RIGHT_SINGLE_QUOTE}/, APOSTROPHE)
+          text = text.gsub(/#{LEFT_DOUBLE_QUOTE}|#{RIGHT_DOUBLE_QUOTE}/, QUOTE)
+          out << text
         elsif node.element? && !IGNORE_TAGS.include?(node.name)
           convert_node_to_plain_text(node, out, child_options(node, options))
 
@@ -101,6 +117,7 @@ module HtmlToPlainText
           end
         end
       end
+
       out
     end
 
