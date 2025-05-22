@@ -54,7 +54,7 @@ module HtmlToPlainText
     # Convert an HTML node to plain text. This method is called recursively with the output and
     # formatting options for special tags.
     def convert_node_to_plain_text(parent, out = '', options = {})
-      if PARAGRAPH_TAGS.include?(parent.name)
+      if PARAGRAPH_TAGS.include?(parent.name) && parent.parent&.name != LI
         append_paragraph_breaks(out)
       elsif BLOCK_TAGS.include?(parent.name)
         append_block_breaks(out)
@@ -94,7 +94,7 @@ module HtmlToPlainText
                 node.text != href[NON_PROTOCOL_PATTERN, 1] # use only text for <a href="mailto:a@b.com">a@b.com</a>
               out << " (#{href}) "
             end
-          elsif PARAGRAPH_TAGS.include?(node.name)
+          elsif PARAGRAPH_TAGS.include?(node.name) && node.parent&.name != LI
             append_paragraph_breaks(out)
           elsif BLOCK_TAGS.include?(node.name)
             append_block_breaks(out)
