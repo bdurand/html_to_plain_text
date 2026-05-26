@@ -10,7 +10,6 @@ Gem::Specification.new do |s|
 
   s.files = ['README.rdoc', 'VERSION', 'Rakefile', 'MIT_LICENSE'] +  Dir.glob('lib/**/*')
 
-  s.has_rdoc = true
   s.rdoc_options = ["--charset=UTF-8", "--main", "README.rdoc"]
   s.extra_rdoc_files = ["README.rdoc"]
 

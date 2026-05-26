@@ -1,4 +1,10 @@
-pkg
-tmp
-rdoc
-*.rbc
+.DS_Store
+.bundle/
+.rspec
+.ruby-version
+.yardoc
+.env
+.claude/
+coverage/
+log/*.log
+pkg/
