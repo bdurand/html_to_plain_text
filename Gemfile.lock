@@ -13,7 +13,7 @@ GEM
     diff-lcs (1.6.2)
     io-console (0.8.2)
     mini_portile2 (2.8.9)
-    nokogiri (1.19.3)
+    nokogiri (1.19.4)
       mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
     racc (1.8.1)
