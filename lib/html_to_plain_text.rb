@@ -56,6 +56,7 @@ module HtmlToPlainText
     # Convert an HTML node to plain text. This method is called recursively with the output and
     # formatting options for special tags.
     def convert_node_to_plain_text(parent, out = '', options = {})
+      out = out.dup if out.frozen?
       if PARAGRAPH_TAGS.include?(parent.name)
         append_paragraph_breaks(out)
       elsif BLOCK_TAGS.include?(parent.name)
