@@ -10,6 +10,8 @@ on:
     branches:
       - master
   workflow_dispatch:
+env:
+  RUBYOPT: '--enable=frozen-string-literal --debug=frozen-string-literal'
 jobs:
   specs:
     name: Run specs

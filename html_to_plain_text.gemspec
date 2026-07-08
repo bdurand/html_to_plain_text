@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 Gem::Specification.new do |s|
   s.name = 'html_to_plain_text'
   s.version = File.read(File.expand_path("../VERSION", __FILE__)).strip
