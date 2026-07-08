@@ -10,11 +10,6 @@ on:
     branches:
       - master
   workflow_dispatch:
-env:
-  BUNDLE_CLEAN: "true"
-  BUNDLE_PATH: vendor/bundle
-  BUNDLE_JOBS: 3
-  BUNDLE_RETRY: 3
 jobs:
   specs:
     name: Run specs
@@ -22,21 +17,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - ruby: "ruby"
+        ruby:
+          - "3.2"
+          - "3.3"
+          - "3.4"
+          - "4.0"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
       - name: Set up Ruby ${{ matrix.ruby }}
         uses: ruby/setup-ruby@v1
         with:
+          bundler-cache: true
           ruby-version: "${{ matrix.ruby }}"
-      - name: Install bundler
-        run: |
-          bundle install --jobs 3 --retry 3
       - name: Run specs
         run: |
-          bundle exec rake spec
-      - name: Run standardrb
-        if:   matrix.standardrb == true
-        run:  bundle exec rake standard
+          bundle exec rake test
