@@ -2,16 +2,22 @@ name: Continuous Integration
 on:
   push:
     branches:
-      - master
+      - main
       - actions-*
     tags:
       - v*
   pull_request:
-    branches:
-      - master
+    branches-ignore:
+      - actions-*
   workflow_dispatch:
+
 env:
+  BUNDLE_CLEAN: "true"
+  BUNDLE_PATH: vendor/bundle
+  BUNDLE_JOBS: 3
+  BUNDLE_RETRY: 3
   RUBYOPT: '--enable=frozen-string-literal --debug=frozen-string-literal'
+
 jobs:
   specs:
     name: Run specs
@@ -19,19 +25,44 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby:
-          - "3.2"
-          - "3.3"
-          - "3.4"
-          - "4.0"
+        include:
+          - ruby: "ruby"
+            yard: true
+            standardrb: true
+          - ruby: "2.7"
+          - ruby: "3.0"
+          - ruby: "3.2"
+          - ruby: "3.3"
+          - ruby: "3.4"
+          - ruby: "4.0"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: Set up Ruby ${{ matrix.ruby }}
-        uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
-          ruby-version: "${{ matrix.ruby }}"
-      - name: Run specs
-        run: |
-          bundle exec rake spec
+    - uses: actions/checkout@v6
+    - name: Set up Ruby ${{ matrix.ruby }}
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: "${{ matrix.ruby }}"
+    - name: Install packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install libsqlite3-dev
+    - name: Setup bundler
+      if: matrix.bundler != ''
+      run: |
+        gem uninstall bundler --all
+        gem install bundler --no-document --version ${{ matrix.bundler }}
+    - name: Set Appraisal bundle
+      if: matrix.appraisal != ''
+      run: |
+        echo "using gemfile gemfiles/${{ matrix.appraisal }}.gemfile"
+        bundle config set gemfile "gemfiles/${{ matrix.appraisal }}.gemfile"
+    - name: Install gems
+      run: |
+        bundle install
+    - name: Run Tests
+      run: bundle exec rake
+    - name: standardrb
+      if:   matrix.standardrb == true
+      run:  bundle exec standardrb
+    - name: yard
+      if: matrix.yard == true
+      run:  bundle exec yard doc --fail-on-warning
