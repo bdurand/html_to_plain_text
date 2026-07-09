@@ -1,7 +1,12 @@
-require "bundler/gem_tasks"
+# frozen_string_literal: true
 
-require "rspec/core/rake_task"
-require "standard/rake"
+begin
+  require "bundler/setup"
+rescue LoadError
+  puts "You must `gem install bundler` and `bundle install` to run rake tasks"
+end
+
+require "bundler/gem_tasks"
 
 task :verify_release_branch do
   unless `git rev-parse --abbrev-ref HEAD`.chomp == "main"

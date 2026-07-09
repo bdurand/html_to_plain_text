@@ -4,63 +4,67 @@ require 'nokogiri'
 
 # The main method on this module +plain_text+ will convert a string of HTML to a plain text approximation.
 module HtmlToPlainText
-  IGNORE_TAGS = %w(script style object applet iframe).inject({}){|h, t| h[t] = true; h}.freeze
+  IGNORE_TAGS = %w(script noscript style object applet iframe).inject({}){|h, t| h[t] = true; h}.freeze
   PARAGRAPH_TAGS = %w(p h1 h2 h3 h4 h5 h6 table ol ul dl dd blockquote dialog figure aside section).inject({}){|h, t| h[t] = true; h}.freeze
   BLOCK_TAGS = %w(div address li dt center del article header header footer nav pre legend tr).inject({}){|h, t| h[t] = true; h}.freeze
   WHITESPACE = [" ", "\n", "\r"].freeze
-  PLAINTEXT = "plaintext".freeze
-  PRE = "pre".freeze
-  BR = "br".freeze
-  HR = "hr".freeze
-  TD = "td".freeze
-  TH = "th".freeze
-  TR = "tr".freeze
-  OL = "ol".freeze
-  UL = "ul".freeze
-  LI = "li".freeze
-  A = "a".freeze
-  TABLE = "table".freeze
+  PLAINTEXT = "plaintext"
+  PRE = "pre"
+  BR = "br"
+  HR = "hr"
+  TD = "td"
+  TH = "th"
+  TR = "tr"
+  OL = "ol"
+  UL = "ul"
+  LI = "li"
+  A = "a"
+  TABLE = "table"
   NUMBERS = ["1", "a"].freeze
-  ABSOLUTE_URL_PATTERN = /^[a-z]+:\/\/[a-z0-9]/i.freeze
+  ABSOLUTE_URL_PATTERN = /^[a-z]+:\/\/[a-z0-9]/i
   HTML_PATTERN = /[<&]/.freeze
-  TRAILING_WHITESPACE = /[ \t]+$/.freeze
-  BODY_TAG_XPATH = "/html/body".freeze
-  CARRIDGE_RETURN_PATTERN = /\r(\n?)/.freeze
-  LINE_BREAK_PATTERN = /[\n\r]/.freeze
-  NON_PROTOCOL_PATTERN = /:\/?\/?(.*)/.freeze
-  NOT_WHITESPACE_PATTERN = /\S/.freeze
-  SPACE = " ".freeze
-  EMPTY = "".freeze
-  NEWLINE = "\n".freeze
-  HREF = "href".freeze
-  TABLE_SEPARATOR = " | ".freeze
+  TRAILING_WHITESPACE = /[[:blank:]]+$/
+  BODY_TAG_XPATH = "/html/body"
+  CARRIAGE_RETURN_PATTERN = /\r\n?/
+  LINE_BREAK_PATTERN = /[\n\r]/
+  NON_PROTOCOL_PATTERN = /:\/?\/?(.*)/
+  ALL_WHITESPACE_PATTERN = /[[:space:]]+/
+  NOT_WHITESPACE_PATTERN = /[^[:space:]]/
+  SPACE = " "
+  EMPTY = ""
+  NEWLINE = "\n"
+  HREF = "href"
+  TABLE_SEPARATOR = " | "
 
   # Helper instance method for converting HTML into plain text. This method simply calls HtmlToPlainText.plain_text.
   #
   # @param html [String] The HTML to convert into plain text.
+  # @param show_links [Boolean] Whether to include links in the output.
   # @return [String] The plain text approximation of the HTML.
-  def plain_text(html)
-    HtmlToPlainText.plain_text(html)
+  def plain_text(html, show_links: true)
+    HtmlToPlainText.plain_text(html, show_links: show_links)
   end
 
   class << self
     # Convert some HTML into a plain text approximation.
     #
     # @param html [String] The HTML to convert into plain text.
+    # @param show_links [Boolean] Whether to include links in the output.
     # @return [String] The plain text approximation of the HTML.
-    def plain_text(html)
+    def plain_text(html, show_links: true)
       return nil if html.nil?
       return html.dup unless html =~ HTML_PATTERN
       body = Nokogiri::HTML::Document.parse(html).xpath(BODY_TAG_XPATH).first
       return unless body
-      convert_node_to_plain_text(body).strip.gsub(CARRIDGE_RETURN_PATTERN, NEWLINE)
+      convert_node_to_plain_text(body, '', show_links: show_links).strip.gsub(CARRIAGE_RETURN_PATTERN, NEWLINE)
     end
 
     private
 
     # Convert an HTML node to plain text. This method is called recursively with the output and
     # formatting options for special tags.
-    def convert_node_to_plain_text(parent, out = '', options = {})
+    def convert_node_to_plain_text(parent, out, options = {})
+      out = out.dup if out.frozen?
       if PARAGRAPH_TAGS.include?(parent.name)
         append_paragraph_breaks(out)
       elsif BLOCK_TAGS.include?(parent.name)
@@ -74,7 +78,7 @@ module HtmlToPlainText
         if node.text? || node.cdata?
           text = node.text
           unless options[:pre]
-            text = node.text.gsub(LINE_BREAK_PATTERN, SPACE).squeeze(SPACE)
+            text.gsub!(ALL_WHITESPACE_PATTERN, SPACE)
             text.lstrip! if WHITESPACE.include?(out[-1, 1])
           end
           out << text
@@ -92,14 +96,17 @@ module HtmlToPlainText
             out << "-------------------------------\n"
           elsif node.name == TD || node.name == TH
             out << (data_table?(parent.parent) ? TABLE_SEPARATOR : SPACE)
-          elsif node.name == A
+          elsif node.name == A && options[:show_links]
             href = node[HREF]
-            if href &&
-                href =~ ABSOLUTE_URL_PATTERN &&
-                node.text =~ NOT_WHITESPACE_PATTERN &&
-                node.text != href &&
-                node.text != href[NON_PROTOCOL_PATTERN, 1] # use only text for <a href="mailto:a@b.com">a@b.com</a>
-              out << " (#{href}) "
+            if href && href =~ ABSOLUTE_URL_PATTERN
+              text = node.text
+              text.gsub!(ALL_WHITESPACE_PATTERN, SPACE)
+              text.strip!
+              if text.size > 0 &&
+                   text != href &&
+                   text != href[NON_PROTOCOL_PATTERN, 1] # use only text for <a href="mailto:a@b.com">a@b.com</a>
+                out << " (#{href}) "
+              end
             end
           elsif PARAGRAPH_TAGS.include?(node.name)
             append_paragraph_breaks(out)
