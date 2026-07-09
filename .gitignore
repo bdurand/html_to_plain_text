@@ -2,9 +2,15 @@
 .bundle/
 .rspec
 .ruby-version
-.yardoc
+.yardoc/
 .env
-.claude/
 coverage/
 log/*.log
 pkg/
+rdoc/
+doc/
+test_app/.session.key
+test_app/tmp
+.claude/
+.conductor/
+.context/

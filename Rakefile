@@ -1,10 +1,17 @@
-require 'bundler/setup'
-require 'bundler/gem_tasks'
-require 'rspec/core/rake_task'
-require 'bump/tasks'
+require "bundler/gem_tasks"
 
-desc 'Default: run unit tests.'
-task :default => :test
+require "rspec/core/rake_task"
+require "standard/rake"
 
-desc 'Run the unit tests'
-RSpec::Core::RakeTask.new(:test)
+task :verify_release_branch do
+  unless `git rev-parse --abbrev-ref HEAD`.chomp == "main"
+    warn "Gem can only be released from the main branch"
+    exit 1
+  end
+end
+
+Rake::Task[:release].enhance([:verify_release_branch])
+
+RSpec::Core::RakeTask.new(:spec)
+
+task default: :spec

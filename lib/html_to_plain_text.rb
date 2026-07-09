@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'nokogiri'
 
 # The main method on this module +plain_text+ will convert a string of HTML to a plain text approximation.
@@ -34,13 +36,18 @@ module HtmlToPlainText
   TABLE_SEPARATOR = " | ".freeze
 
   # Helper instance method for converting HTML into plain text. This method simply calls HtmlToPlainText.plain_text.
+  #
+  # @param html [String] The HTML to convert into plain text.
+  # @return [String] The plain text approximation of the HTML.
   def plain_text(html)
     HtmlToPlainText.plain_text(html)
   end
 
   class << self
     # Convert some HTML into a plain text approximation.
-
+    #
+    # @param html [String] The HTML to convert into plain text.
+    # @return [String] The plain text approximation of the HTML.
     def plain_text(html)
       return nil if html.nil?
       return html.dup unless html =~ HTML_PATTERN
