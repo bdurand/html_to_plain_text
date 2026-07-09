@@ -38,9 +38,14 @@ RSpec.describe HtmlToPlainText do
     expect(text(html)).to eq "This is so cool. I mean it."
   end
 
-  it "removes script, style, object, applet, and iframe tags" do
-    html = "script <script>do_something</script> style <style>css</style> object <object>config</object> applet <applet>config</applet> iframe <iframe>config</iframe>"
-    expect(text(html)).to eq "script style object applet iframe"
+  it "removes script, noscript, style, object, applet, and iframe tags" do
+    html = "script <script>do_something</script> noscript <noscript>enable js</noscript> style <style>css</style> object <object>config</object> applet <applet>config</applet> iframe <iframe>config</iframe>"
+    expect(text(html)).to eq "script noscript style object applet iframe"
+  end
+
+  it "collapses tabs and other whitespace to a single space" do
+    html = "<p>this\tis\t\ta\ttest</p>"
+    expect(text(html)).to eq "this is a test"
   end
 
   it "handles plaintext tags" do
@@ -126,6 +131,16 @@ RSpec.describe HtmlToPlainText do
 
     it "ignores empty" do
       expect(text("<a href='http://example.com/test2'> <img src='test'> </a>")).to eq ""
+    end
+
+    it "omits link URLs when the show_links option is false" do
+      html = "<a href='http://example.com/test'>full</a>"
+      expect(HtmlToPlainText.plain_text(html, show_links: false)).to eq "full"
+    end
+
+    it "includes link URLs when the show_links option is true" do
+      html = "<a href='http://example.com/test'>full</a>"
+      expect(HtmlToPlainText.plain_text(html, show_links: true)).to eq "full (http://example.com/test)"
     end
   end
 
