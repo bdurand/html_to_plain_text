@@ -7,6 +7,10 @@ RSpec.describe HtmlToPlainText do
     HtmlToPlainText.plain_text(html)
   end
 
+  def markdown(html, **options)
+    HtmlToPlainText.markdown(html, **options)
+  end
+
   it "formats paragraph tags" do
     html = "<h1>Test</h1><h2>More Test</h2>\t \t<p>\n\tThis is a test\n</p>"
     expect(text(html)).to eq "Test\n\nMore Test\n\nThis is a test"
@@ -47,6 +51,21 @@ RSpec.describe HtmlToPlainText do
     expect(text(html)).to eq "script noscript style object applet iframe"
   end
 
+  it "removes template, svg, math, canvas, audio, and video tags" do
+    html = "template <template><div>hidden</div></template>svg <svg><text>hidden</text></svg>math <math><mi>hidden</mi></math>canvas <canvas>hidden</canvas>audio <audio>hidden</audio>video <video>hidden</video>done"
+    expect(text(html)).to eq "template svg math canvas audio video done"
+  end
+
+  it "removes form input tags" do
+    html = "select <select><option>hidden</option></select>textarea <textarea>hidden</textarea>done"
+    expect(text(html)).to eq "select textarea done"
+  end
+
+  it "formats semantic layout tags as blocks" do
+    html = "<main>main</main><figcaption>figcaption</figcaption><summary>summary</summary><details>details</details><form>form</form><fieldset>fieldset</fieldset><hgroup>hgroup</hgroup>"
+    expect(text(html)).to eq "main\nfigcaption\nsummary\ndetails\nform\nfieldset\nhgroup"
+  end
+
   it "collapses tabs and other whitespace to a single space" do
     html = "<p>this\tis\t\ta\ttest</p>"
     expect(text(html)).to eq "this is a test"
@@ -72,6 +91,11 @@ RSpec.describe HtmlToPlainText do
     expect(text(html)).to eq "List\n\n1. one\n2. two\n\na. a\nb. b\n\n3. three"
   end
 
+  it "formats menu tags as bullet lists" do
+    html = "List<menu><li>one</li><li>two</li></menu>"
+    expect(text(html)).to eq "List\n\n* one\n* two"
+  end
+
   describe "tables" do
     it "formats a simgple table" do
       html = "Table<table border='1'><tr><th>Col 1</th><th>Col 2</th></tr><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></table>"
@@ -91,6 +115,21 @@ RSpec.describe HtmlToPlainText do
     it "formats a table with a thead and tbody" do
       html = "<table border='1'><thead><tr><th>Col 1</th><th>Col 2</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table>"
       expect(text(html)).to eq "| Col 1 | Col 2 |\n| 1 | 2 |"
+    end
+
+    it "detects a data table by the presence of a thead or tbody element" do
+      html = "<table><thead><tr><th>Col 1</th></tr></thead><tbody><tr><td>1</td></tr></tbody></table>"
+      expect(text(html)).to eq "| Col 1 |\n| 1 |"
+    end
+
+    it "does not add bars to a table without a border, thead, or tbody" do
+      html = "<table><tr><td>1</td><td>2</td></tr></table>"
+      expect(text(html)).to eq "1 2"
+    end
+
+    it "formats all tables as data tables with the all_tables option" do
+      html = "<table><tr><td>1</td><td>2</td></tr></table>"
+      expect(HtmlToPlainText.plain_text(html, all_tables: true)).to eq "| 1 | 2 |"
     end
   end
 
@@ -206,5 +245,147 @@ RSpec.describe HtmlToPlainText do
   it "handles UTF-8 characters" do
     html = "<p>ümlaut</p>"
     expect(text(html)).to eq "ümlaut"
+  end
+
+  describe "markdown" do
+    it "is the same as calling plain_text with the markdown option" do
+      html = "<h1>Test</h1><p><strong>bold</strong></p>"
+      expect(HtmlToPlainText.plain_text(html, markdown: true)).to eq "# Test\n\n**bold**"
+      expect(markdown(html)).to eq "# Test\n\n**bold**"
+    end
+
+    it "formats headings" do
+      html = "<h1>One</h1><h2>Two</h2><h3>Three</h3><h4>Four</h4><h5>Five</h5><h6>Six</h6>"
+      expect(markdown(html)).to eq "# One\n\n## Two\n\n### Three\n\n#### Four\n\n##### Five\n\n###### Six"
+    end
+
+    it "formats bold tags" do
+      expect(markdown("This is <strong>so</strong> <b>cool</b>")).to eq "This is **so** **cool**"
+    end
+
+    it "formats italic tags" do
+      expect(markdown("This is <em>so</em> <i>cool</i>")).to eq "This is *so* *cool*"
+    end
+
+    it "formats strikethrough tags" do
+      expect(markdown("a <del>b</del> <s>c</s> <strike>d</strike> e")).to eq "a ~~b~~ ~~c~~ ~~d~~ e"
+    end
+
+    it "formats inline code tags" do
+      expect(markdown("run <code>ls -l</code> now")).to eq "run `ls -l` now"
+    end
+
+    it "keeps whitespace outside of inline markers" do
+      expect(markdown("word <b>bold </b>after")).to eq "word **bold** after"
+    end
+
+    it "does not add markers for empty inline tags" do
+      expect(markdown("empty <strong>  </strong>marks")).to eq "empty marks"
+    end
+
+    it "formats links" do
+      html = "<a href='http://example.com/test'>full</a>"
+      expect(markdown(html)).to eq "[full](http://example.com/test)"
+    end
+
+    it "uses a bare URL when the link text duplicates the href" do
+      expect(markdown("<a href='http://example.com'>http://example.com</a>")).to eq "http://example.com"
+      expect(markdown("<a href='http://example.com'>example.com</a>")).to eq "example.com"
+      expect(markdown("<a href='mailto:john@example.com'>john@example.com</a>")).to eq "john@example.com"
+    end
+
+    it "discards paths and non-link protocols in links" do
+      expect(markdown("<a href='/test'>Links</a>")).to eq "Links"
+      expect(markdown("<a href='javascript:alert(1)'>click</a>")).to eq "click"
+    end
+
+    it "omits link URLs when the show_links option is false" do
+      html = "<a href='http://example.com/test'>full</a>"
+      expect(markdown(html, show_links: false)).to eq "full"
+    end
+
+    it "formats images" do
+      expect(markdown("pic <img src='/image' alt='pic'> here")).to eq "pic ![pic](/image) here"
+      expect(markdown("pic <img src='/image'> here")).to eq "pic ![](/image) here"
+    end
+
+    it "formats linked images" do
+      html = "<a href='http://example.com/'><img src='/i.png' alt='pic'></a>"
+      expect(markdown(html)).to eq "[![pic](/i.png)](http://example.com/)"
+    end
+
+    it "omits images when the show_links option is false" do
+      expect(markdown("pic <img src='/image' alt='pic'> here", show_links: false)).to eq "pic here"
+    end
+
+    it "formats blockquote tags" do
+      html = "intro<blockquote><p>one</p><p>two</p></blockquote>outro"
+      expect(markdown(html)).to eq "intro\n\n> one\n>\n> two\n\noutro"
+    end
+
+    it "formats nested blockquote tags" do
+      html = "<blockquote>outer<blockquote>inner</blockquote></blockquote>"
+      expect(markdown(html)).to eq "> outer\n>\n> > inner"
+    end
+
+    it "formats pre tags as fenced code blocks" do
+      html = "<div>before</div><pre>a\n  b</pre>after"
+      expect(markdown(html)).to eq "before\n```\na\n  b\n```\nafter"
+    end
+
+    it "formats pre tags with nested code tags as fenced code blocks" do
+      html = "<pre><code>x = 1\ny = 2</code></pre>"
+      expect(markdown(html)).to eq "```\nx = 1\ny = 2\n```"
+    end
+
+    it "formats <hr> tags" do
+      expect(markdown("Test<hr>More")).to eq "Test\n\n---\nMore"
+    end
+
+    it "formats <br> tags as hard line breaks" do
+      expect(markdown("line1<br>line2")).to eq "line1\\\nline2"
+    end
+
+    it "formats bullet lists with nesting indented" do
+      html = "List<ul><li>one</li><li>two<ul><li>a</li><li>b</li></ul></li><li>three</li></ul>"
+      expect(markdown(html)).to eq "List\n\n- one\n- two\n\n  - a\n  - b\n\n- three"
+    end
+
+    it "formats numbered lists with nesting indented" do
+      html = "List<ol><li>one</li><li>two<ol><li>a</li><li>b</li></ol></li><li>three</li></ol>"
+      expect(markdown(html)).to eq "List\n\n1. one\n2. two\n\n   1. a\n   2. b\n\n3. three"
+    end
+
+    it "formats data tables with a header separator row" do
+      html = "<table><thead><tr><th>Col 1</th><th>Col 2</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></tbody></table>"
+      expect(markdown(html)).to eq "| Col 1 | Col 2 |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |"
+    end
+
+    it "does not format layout tables" do
+      expect(markdown("<table><tr><td>1</td><td>2</td></tr></table>")).to eq "1 2"
+    end
+
+    it "formats all tables with the all_tables option" do
+      html = "<table><tr><td>1</td><td>2</td></tr></table>"
+      expect(markdown(html, all_tables: true)).to eq "| 1 | 2 |\n| --- | --- |"
+    end
+
+    it "does not apply markdown formatting inside pre tags" do
+      html = "<pre>keep <strong>tags</strong> plain</pre>"
+      expect(markdown(html)).to eq "```\nkeep tags plain\n```"
+    end
+  end
+
+  describe "helper instance methods" do
+    let(:helper) { Class.new { include HtmlToPlainText }.new }
+
+    it "provides a plain_text instance method" do
+      expect(helper.plain_text("<h1>Test</h1>")).to eq "Test"
+      expect(helper.plain_text("<h1>Test</h1>", markdown: true)).to eq "# Test"
+    end
+
+    it "provides a markdown instance method" do
+      expect(helper.markdown("<h1>Test</h1>")).to eq "# Test"
+    end
   end
 end
