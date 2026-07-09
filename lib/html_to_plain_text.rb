@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'nokogiri'
 
 # The main method on this module +plain_text+ will convert a string of HTML to a plain text approximation.
@@ -6,18 +8,18 @@ module HtmlToPlainText
   PARAGRAPH_TAGS = %w(p h1 h2 h3 h4 h5 h6 table ol ul dl dd blockquote dialog figure aside section).inject({}){|h, t| h[t] = true; h}.freeze
   BLOCK_TAGS = %w(div address li dt center del article header header footer nav pre legend tr).inject({}){|h, t| h[t] = true; h}.freeze
   WHITESPACE = [" ", "\n", "\r"].freeze
-  PLAINTEXT = "plaintext".freeze
-  PRE = "pre".freeze
-  BR = "br".freeze
-  HR = "hr".freeze
-  TD = "td".freeze
-  TH = "th".freeze
-  TR = "tr".freeze
-  OL = "ol".freeze
-  UL = "ul".freeze
-  LI = "li".freeze
-  A = "a".freeze
-  TABLE = "table".freeze
+  PLAINTEXT = "plaintext"
+  PRE = "pre"
+  BR = "br"
+  HR = "hr"
+  TD = "td"
+  TH = "th"
+  TR = "tr"
+  OL = "ol"
+  UL = "ul"
+  LI = "li"
+  A = "a"
+  TABLE = "table"
   NUMBERS = ["1", "a"].freeze
   ABSOLUTE_URL_PATTERN = /^[a-z]+:\/\/[a-z0-9]/i.freeze
   HTML_PATTERN = /[<&]/.freeze
@@ -27,11 +29,11 @@ module HtmlToPlainText
   LINE_BREAK_PATTERN = /[\n\r]/.freeze
   NON_PROTOCOL_PATTERN = /:\/?\/?(.*)/.freeze
   NOT_WHITESPACE_PATTERN = /\S/.freeze
-  SPACE = " ".freeze
-  EMPTY = "".freeze
-  NEWLINE = "\n".freeze
-  HREF = "href".freeze
-  TABLE_SEPARATOR = " | ".freeze
+  SPACE = " "
+  EMPTY = ""
+  NEWLINE = "\n"
+  HREF = "href"
+  TABLE_SEPARATOR = " | "
 
   # Helper instance method for converting HTML into plain text. This method simply calls HtmlToPlainText.plain_text.
   def plain_text(html)
@@ -54,6 +56,7 @@ module HtmlToPlainText
     # Convert an HTML node to plain text. This method is called recursively with the output and
     # formatting options for special tags.
     def convert_node_to_plain_text(parent, out = '', options = {})
+      out = out.dup if out.frozen?
       if PARAGRAPH_TAGS.include?(parent.name)
         append_paragraph_breaks(out)
       elsif BLOCK_TAGS.include?(parent.name)
