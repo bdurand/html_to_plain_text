@@ -17,6 +17,8 @@ end
 
 Rake::Task[:release].enhance([:verify_release_branch])
 
+require "rspec/core/rake_task"
+
 RSpec::Core::RakeTask.new(:spec)
 
-task default: :spec
+task default: [:spec]

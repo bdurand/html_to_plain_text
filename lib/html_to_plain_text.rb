@@ -1,12 +1,18 @@
 # frozen_string_literal: true
 
-require 'nokogiri'
+require "nokogiri"
 
 # The main method on this module +plain_text+ will convert a string of HTML to a plain text approximation.
 module HtmlToPlainText
-  IGNORE_TAGS = %w(script noscript style object applet iframe).inject({}){|h, t| h[t] = true; h}.freeze
-  PARAGRAPH_TAGS = %w(p h1 h2 h3 h4 h5 h6 table ol ul dl dd blockquote dialog figure aside section).inject({}){|h, t| h[t] = true; h}.freeze
-  BLOCK_TAGS = %w(div address li dt center del article header header footer nav pre legend tr).inject({}){|h, t| h[t] = true; h}.freeze
+  IGNORE_TAGS = %w[script noscript style object applet iframe].each_with_object({}) { |t, h|
+    h[t] = true
+  }.freeze
+  PARAGRAPH_TAGS = %w[p h1 h2 h3 h4 h5 h6 table ol ul dl dd blockquote dialog figure aside section].each_with_object({}) { |t, h|
+    h[t] = true
+  }.freeze
+  BLOCK_TAGS = %w[div address li dt center del article header header footer nav pre legend tr].each_with_object({}) { |t, h|
+    h[t] = true
+  }.freeze
   WHITESPACE = [" ", "\n", "\r"].freeze
   PLAINTEXT = "plaintext"
   PRE = "pre"
@@ -53,10 +59,10 @@ module HtmlToPlainText
     # @return [String] The plain text approximation of the HTML.
     def plain_text(html, show_links: true)
       return nil if html.nil?
-      return html.dup unless html =~ HTML_PATTERN
+      return html.dup unless HTML_PATTERN.match?(html)
       body = Nokogiri::HTML::Document.parse(html).xpath(BODY_TAG_XPATH).first
       return unless body
-      convert_node_to_plain_text(body, '', show_links: show_links).strip.gsub(CARRIAGE_RETURN_PATTERN, NEWLINE)
+      convert_node_to_plain_text(body, "", show_links: show_links).strip.gsub(CARRIAGE_RETURN_PATTERN, NEWLINE)
     end
 
     private
@@ -103,8 +109,8 @@ module HtmlToPlainText
               text.gsub!(ALL_WHITESPACE_PATTERN, SPACE)
               text.strip!
               if text.size > 0 &&
-                   text != href &&
-                   text != href[NON_PROTOCOL_PATTERN, 1] # use only text for <a href="mailto:a@b.com">a@b.com</a>
+                  text != href &&
+                  text != href[NON_PROTOCOL_PATTERN, 1] # use only text for <a href="mailto:a@b.com">a@b.com</a>
                 out << " (#{href}) "
               end
             end
@@ -123,13 +129,13 @@ module HtmlToPlainText
       if node.name == UL
         level = options[:ul] || -1
         level += 1
-        options.merge(:list => :ul, :ul => level)
+        options.merge(list: :ul, ul: level)
       elsif node.name == OL
         level = options[:ol] || -1
         level += 1
-        options.merge(:list => :ol, :ol => level, :number => NUMBERS[level % 2])
+        options.merge(list: :ol, ol: level, number: NUMBERS[level % 2])
       elsif node.name == PRE
-        options.merge(:pre => true)
+        options.merge(pre: true)
       else
         options
       end
@@ -156,7 +162,7 @@ module HtmlToPlainText
     # Add an appropriate bullet or number to a list element.
     def format_list_item(out, options)
       if options[:list] == :ul
-        out << "#{'*' * (options[:ul] + 1)} "
+        out << "#{"*" * (options[:ul] + 1)} "
       elsif options[:list] == :ol
         number = options[:number]
         options[:number] = number.next
@@ -165,7 +171,7 @@ module HtmlToPlainText
     end
 
     def data_table?(table)
-      table.attributes['border'].to_s.to_i > 0
+      table.attributes["border"].to_s.to_i > 0
     end
   end
 end
