@@ -32,6 +32,11 @@ RSpec.describe HtmlToPlainText do
     expect(text(html)).to eq "This is a test\nwith\n  pre tags\nend"
   end
 
+  it "does not remove trailing blanks inside <pre> tag blocks" do
+    html = "<pre>foo  \nbar</pre><br>after"
+    expect(text(html)).to eq "foo  \nbar\n\nafter"
+  end
+
   it "removes inline formatting tags" do
     html = "This is <strong>so</strong> cool. I<em> mean <em>it."
     expect(text(html)).to eq "This is so cool. I mean it."
@@ -76,6 +81,16 @@ RSpec.describe HtmlToPlainText do
     it "does not add bars to a layout table" do
       html = "Table<table border='0'><tr><th>Col 1</th><th>Col 2</th></tr><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></table>"
       expect(text(html)).to eq "Table\n\nCol 1 Col 2\n1 2\n3 4"
+    end
+
+    it "formats a table with an explicit tbody" do
+      html = "<table border='1'><tbody><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></tbody></table>"
+      expect(text(html)).to eq "| 1 | 2 |\n| 3 | 4 |"
+    end
+
+    it "formats a table with a thead and tbody" do
+      html = "<table border='1'><thead><tr><th>Col 1</th><th>Col 2</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table>"
+      expect(text(html)).to eq "| Col 1 | Col 2 |\n| 1 | 2 |"
     end
   end
 
@@ -128,6 +143,26 @@ RSpec.describe HtmlToPlainText do
       expect(text(html)).to eq "john@example.com"
     end
 
+    it "includes mailto URLs when the text is different" do
+      html = "<a href='mailto:john@example.com'>Contact John</a>"
+      expect(text(html)).to eq "Contact John (mailto:john@example.com)"
+    end
+
+    it "includes tel URLs when the text is different" do
+      html = "<a href='tel:+15555551234'>Call us</a>"
+      expect(text(html)).to eq "Call us (tel:+15555551234)"
+    end
+
+    it "only uses the name for tel duplicates" do
+      html = "<a href='tel:+15555551234'>+15555551234</a>"
+      expect(text(html)).to eq "+15555551234"
+    end
+
+    it "discards javascript and other non-link protocols" do
+      expect(text("<a href='javascript:alert(1)'>click</a>")).to eq "click"
+      expect(text("<a href=\"javascript:x\nhttp://y\">click</a>")).to eq "click"
+    end
+
     it "ignores empty" do
       expect(text("<a href='http://example.com/test2'> <img src='test'> </a>")).to eq ""
     end
@@ -158,6 +193,14 @@ RSpec.describe HtmlToPlainText do
 
   it "handles non-html text" do
     expect(text("test")).to eq "test"
+  end
+
+  it "normalizes line breaks in non-html text" do
+    expect(text("line1\r\nline2\rline3")).to eq "line1\nline2\nline3"
+  end
+
+  it "returns an empty string when there is no body" do
+    expect(text("<!-- just a comment -->")).to eq ""
   end
 
   it "handles UTF-8 characters" do

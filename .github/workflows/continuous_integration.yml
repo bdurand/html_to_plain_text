@@ -34,4 +34,4 @@ jobs:
           ruby-version: "${{ matrix.ruby }}"
       - name: Run specs
         run: |
-          bundle exec rake test
+          bundle exec rake spec
