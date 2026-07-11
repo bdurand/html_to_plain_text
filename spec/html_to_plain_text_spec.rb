@@ -1,7 +1,6 @@
-# encoding: UTF-8
 # frozen_string_literal: true
 
-require 'spec_helper'
+require "spec_helper"
 
 RSpec.describe HtmlToPlainText do
   def text(html)
@@ -154,11 +153,11 @@ RSpec.describe HtmlToPlainText do
   end
 
   it "handles empty text" do
-    expect(text((""))).to eq ""
+    expect(text("")).to eq ""
   end
 
   it "handles non-html text" do
-    expect(text(("test"))).to eq "test"
+    expect(text("test")).to eq "test"
   end
 
   it "handles UTF-8 characters" do

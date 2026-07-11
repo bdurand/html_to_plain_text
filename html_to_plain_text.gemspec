@@ -1,22 +1,45 @@
 # frozen_string_literal: true
 
-Gem::Specification.new do |s|
-  s.name = 'html_to_plain_text'
-  s.version = File.read(File.expand_path("../VERSION", __FILE__)).strip
-  s.summary = "A simple library for converting HTML into plain text."
-  s.description = "A simple library for converting HTML into an approximation in plain text."
+Gem::Specification.new do |spec|
+  spec.name = "html_to_plain_text"
+  spec.version = File.read(File.expand_path("../VERSION", __FILE__)).strip
+  spec.authors = ["Brian Durand"]
+  spec.email = ["bbdurand@gmail.com"]
 
-  s.authors = ['Brian Durand']
-  s.email = ['bdurand@embellishedvisions.com']
-  s.homepage = "https://github.com/bdurand/html_to_plain_text"
+  spec.summary = "A simple library for converting HTML into plain text."
 
-  s.files = ['README.rdoc', 'VERSION', 'Rakefile', 'MIT_LICENSE'] +  Dir.glob('lib/**/*')
+  spec.homepage = "https://github.com/bdurand/html_to_plain_text"
+  spec.license = "MIT"
 
-  s.rdoc_options = ["--charset=UTF-8", "--main", "README.rdoc"]
-  s.extra_rdoc_files = ["README.rdoc"]
+  spec.metadata = {
+    "homepage_uri" => spec.homepage,
+    "source_code_uri" => spec.homepage,
+    "changelog_uri" => "#{spec.homepage}/blob/main/CHANGELOG.md"
+  }
 
-  s.add_dependency "nokogiri", ">=1.4.0"
-  s.add_development_dependency "rspec", ">2.6.0"
-  s.add_development_dependency "rake"
-  s.add_development_dependency "bump"
+  # Specify which files should be added to the gem when it is released.
+  # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
+  ignore_files = %w[
+    .
+    AGENTS.md
+    Appraisals
+    Gemfile
+    Gemfile.lock
+    Rakefile
+    bin/
+    gemfiles/
+    spec/
+    test_app/
+  ]
+  spec.files = Dir.chdir(File.expand_path("..", __FILE__)) do
+    `git ls-files -z`.split("\x0").reject { |f| ignore_files.any? { |path| f.start_with?(path) } }
+  end
+
+  spec.require_paths = ["lib"]
+
+  spec.required_ruby_version = ">= 3.0"
+
+  spec.add_dependency "nokogiri", ">=1.4.0"
+
+  spec.add_development_dependency "bundler"
 end
