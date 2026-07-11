@@ -37,6 +37,16 @@ RSpec.describe HtmlToPlainText do
     expect(text(html)).to eq "foo  \nbar\n\nafter"
   end
 
+  it "does not remove trailing blanks before a <br> tag inside <pre> tag blocks" do
+    html = "<pre>foo  <br>bar</pre>"
+    expect(text(html)).to eq "foo  \nbar"
+  end
+
+  it "does not remove trailing blanks from the last line of a <pre> tag block" do
+    html = "<pre>foo  </pre><div>bar</div>"
+    expect(text(html)).to eq "foo  \nbar"
+  end
+
   it "removes inline formatting tags" do
     html = "This is <strong>so</strong> cool. I<em> mean <em>it."
     expect(text(html)).to eq "This is so cool. I mean it."
