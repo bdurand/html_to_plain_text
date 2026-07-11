@@ -10,7 +10,7 @@ module HtmlToPlainText
   PARAGRAPH_TAGS = %w[p h1 h2 h3 h4 h5 h6 table ol ul dl dd blockquote dialog figure aside section].each_with_object({}) { |t, h|
     h[t] = true
   }.freeze
-  BLOCK_TAGS = %w[div address li dt center del article header header footer nav pre legend tr].each_with_object({}) { |t, h|
+  BLOCK_TAGS = %w[div address li dt center del article header footer nav pre legend tr].each_with_object({}) { |t, h|
     h[t] = true
   }.freeze
   WHITESPACE = [" ", "\n", "\r"].freeze
@@ -27,9 +27,8 @@ module HtmlToPlainText
   A = "a"
   TABLE = "table"
   NUMBERS = ["1", "a"].freeze
-  ABSOLUTE_URL_PATTERN = /^[a-z]+:\/\/[a-z0-9]/i
-  HTML_PATTERN = /[<&]/.freeze
-  TRAILING_WHITESPACE = /[[:blank:]]+$/
+  LINK_URL_PATTERN = /\A(?:[a-z][a-z0-9.+-]*:\/\/[a-z0-9]|mailto:|tel:)/i
+  HTML_PATTERN = /[<&]/
   BODY_TAG_XPATH = "/html/body"
   CARRIAGE_RETURN_PATTERN = /\r\n?/
   LINE_BREAK_PATTERN = /[\n\r]/
@@ -37,6 +36,7 @@ module HtmlToPlainText
   ALL_WHITESPACE_PATTERN = /[[:space:]]+/
   NOT_WHITESPACE_PATTERN = /[^[:space:]]/
   SPACE = " "
+  TAB = "\t"
   EMPTY = ""
   NEWLINE = "\n"
   HREF = "href"
@@ -59,9 +59,9 @@ module HtmlToPlainText
     # @return [String] The plain text approximation of the HTML.
     def plain_text(html, show_links: true)
       return nil if html.nil?
-      return html.dup unless HTML_PATTERN.match?(html)
+      return html.gsub(CARRIAGE_RETURN_PATTERN, NEWLINE).strip unless HTML_PATTERN.match?(html)
       body = Nokogiri::HTML::Document.parse(html).xpath(BODY_TAG_XPATH).first
-      return unless body
+      return +"" unless body
       convert_node_to_plain_text(body, "", show_links: show_links).strip.gsub(CARRIAGE_RETURN_PATTERN, NEWLINE)
     end
 
@@ -71,14 +71,17 @@ module HtmlToPlainText
     # formatting options for special tags.
     def convert_node_to_plain_text(parent, out, options = {})
       out = out.dup if out.frozen?
+      # The buffer tail here was written before this node opened, so it is only
+      # preformatted content when an ancestor (not this node itself) is a pre tag.
+      trim = !options[:pre] || parent.name == PRE
       if PARAGRAPH_TAGS.include?(parent.name)
-        append_paragraph_breaks(out)
+        append_paragraph_breaks(out, trim: trim)
       elsif BLOCK_TAGS.include?(parent.name)
-        append_block_breaks(out)
+        append_block_breaks(out, trim: trim)
       end
 
       format_list_item(out, options) if parent.name == LI
-      out << "| " if parent.name == TR && data_table?(parent.parent)
+      out << "| " if parent.name == TR && data_table?(parent)
 
       parent.children.each do |node|
         if node.text? || node.cdata?
@@ -94,17 +97,17 @@ module HtmlToPlainText
           convert_node_to_plain_text(node, out, child_options(node, options))
 
           if node.name == BR
-            out.sub!(TRAILING_WHITESPACE, EMPTY)
+            trim_trailing_blanks!(out) unless options[:pre]
             out << NEWLINE
           elsif node.name == HR
-            out.sub!(TRAILING_WHITESPACE, EMPTY)
+            trim_trailing_blanks!(out) unless options[:pre]
             out << NEWLINE unless out.end_with?(NEWLINE)
             out << "-------------------------------\n"
           elsif node.name == TD || node.name == TH
-            out << (data_table?(parent.parent) ? TABLE_SEPARATOR : SPACE)
+            out << (data_table?(parent) ? TABLE_SEPARATOR : SPACE)
           elsif node.name == A && options[:show_links]
             href = node[HREF]
-            if href && href =~ ABSOLUTE_URL_PATTERN
+            if href && href =~ LINK_URL_PATTERN
               text = node.text
               text.gsub!(ALL_WHITESPACE_PATTERN, SPACE)
               text.strip!
@@ -115,9 +118,10 @@ module HtmlToPlainText
               end
             end
           elsif PARAGRAPH_TAGS.include?(node.name)
-            append_paragraph_breaks(out)
+            append_paragraph_breaks(out, trim: !options[:pre])
           elsif BLOCK_TAGS.include?(node.name)
-            append_block_breaks(out)
+            # A closing pre tag leaves preformatted content at the buffer tail.
+            append_block_breaks(out, trim: !options[:pre] && node.name != PRE)
           end
         end
       end
@@ -143,8 +147,8 @@ module HtmlToPlainText
 
     # Add double line breaks between paragraph elements. If line breaks already exist,
     # new ones will only be added to get to two.
-    def append_paragraph_breaks(out)
-      out.sub!(TRAILING_WHITESPACE, EMPTY)
+    def append_paragraph_breaks(out, trim: true)
+      trim_trailing_blanks!(out) if trim
       if out.end_with?(NEWLINE)
         out << NEWLINE unless out.end_with?("\n\n")
       else
@@ -154,9 +158,14 @@ module HtmlToPlainText
 
     # Add a single line break between block elements. If a line break already exists,
     # none will be added.
-    def append_block_breaks(out)
-      out.sub!(TRAILING_WHITESPACE, EMPTY)
+    def append_block_breaks(out, trim: true)
+      trim_trailing_blanks!(out) if trim
       out << NEWLINE unless out.end_with?(NEWLINE)
+    end
+
+    # Remove spaces and tabs from the end of the output buffer.
+    def trim_trailing_blanks!(out)
+      out.slice!(-1) while out.end_with?(SPACE, TAB)
     end
 
     # Add an appropriate bullet or number to a list element.
@@ -170,7 +179,10 @@ module HtmlToPlainText
       end
     end
 
-    def data_table?(table)
+    def data_table?(tr)
+      table = tr.parent
+      table = table.parent while table && table.name != TABLE
+      return false unless table
       table.attributes["border"].to_s.to_i > 0
     end
   end
