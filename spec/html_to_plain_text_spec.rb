@@ -285,6 +285,12 @@ RSpec.describe HtmlToPlainText do
       expect(markdown("run <code>ls -l</code> now")).to eq "run `ls -l` now"
     end
 
+    it "extends the code span delimiter when the content contains backticks" do
+      expect(markdown("use <code>a ` b</code> now")).to eq "use ``a ` b`` now"
+      expect(markdown("use <code>`quoted`</code> now")).to eq "use `` `quoted` `` now"
+      expect(markdown("use <code>a `` b</code> now")).to eq "use ```a `` b``` now"
+    end
+
     it "keeps whitespace outside of inline markers" do
       expect(markdown("word <b>bold </b>after")).to eq "word **bold** after"
     end
@@ -314,6 +320,12 @@ RSpec.describe HtmlToPlainText do
       expect(markdown(html, show_links: false)).to eq "full"
     end
 
+    it "escapes unbalanced brackets in link text" do
+      expect(markdown("<a href='http://example.com/'>See [RFC 1234]</a>")).to eq "[See [RFC 1234]](http://example.com/)"
+      expect(markdown("<a href='http://example.com/'>a ] b</a>")).to eq "[a \\] b](http://example.com/)"
+      expect(markdown("<a href='http://example.com/'>a [ b</a>")).to eq "[a \\[ b](http://example.com/)"
+    end
+
     it "formats images" do
       expect(markdown("pic <img src='/image' alt='pic'> here")).to eq "pic ![pic](/image) here"
       expect(markdown("pic <img src='/image'> here")).to eq "pic ![](/image) here"
@@ -322,6 +334,16 @@ RSpec.describe HtmlToPlainText do
     it "formats linked images" do
       html = "<a href='http://example.com/'><img src='/i.png' alt='pic'></a>"
       expect(markdown(html)).to eq "[![pic](/i.png)](http://example.com/)"
+    end
+
+    it "discards images with non-link protocols" do
+      expect(markdown("pic <img src='javascript:alert(1)' alt='x'> here")).to eq "pic here"
+      expect(markdown("pic <img src='data:image/png;base64,abc' alt='x'> here")).to eq "pic here"
+      expect(markdown("pic <img src='https://example.com/i.png'> here")).to eq "pic ![](https://example.com/i.png) here"
+    end
+
+    it "escapes unbalanced brackets in image alt text" do
+      expect(markdown("<img src='/image' alt='a ] b'>")).to eq "![a \\] b](/image)"
     end
 
     it "omits images when the show_links option is false" do
