@@ -13,6 +13,12 @@ module HtmlToPlainText
   BLOCK_TAGS = %w[div address li dt center del article header footer nav pre legend tr main figcaption caption summary details form fieldset hgroup].each_with_object({}) { |t, h|
     h[t] = true
   }.freeze
+  NAV_TAGS = %w[header footer nav].each_with_object({}) { |t, h|
+    h[t] = true
+  }.freeze
+  NAV_ROLES = %w[navigation banner contentinfo].each_with_object({}) { |t, h|
+    h[t] = true
+  }.freeze
   MARKDOWN_INLINE_TAGS = {
     "strong" => "**",
     "b" => "**",
@@ -70,6 +76,7 @@ module HtmlToPlainText
   SRC = "src"
   ALT = "alt"
   BORDER = "border"
+  ROLE = "role"
   TABLE_SEPARATOR = " | "
   MARKDOWN_HR = "---\n"
   MARKDOWN_BR = "\\\n"
@@ -85,9 +92,11 @@ module HtmlToPlainText
   # @param show_links [Boolean] Whether to include link URLs and image sources in the output.
   # @param markdown [Boolean] Whether to format the output as Markdown.
   # @param all_tables [Boolean] Whether to format all tables as data tables regardless of their markup.
+  # @param ignore_nav [Boolean] Whether to suppress navigational, header, and footer elements.
+  # @param selector [String, nil] A CSS selector limiting the output to matching elements.
   # @return [String] The plain text approximation of the HTML.
-  def plain_text(html, show_links: true, markdown: false, all_tables: false)
-    HtmlToPlainText.plain_text(html, show_links: show_links, markdown: markdown, all_tables: all_tables)
+  def plain_text(html, show_links: true, markdown: false, all_tables: false, ignore_nav: false, selector: nil)
+    HtmlToPlainText.plain_text(html, show_links: show_links, markdown: markdown, all_tables: all_tables, ignore_nav: ignore_nav, selector: selector)
   end
 
   # Helper instance method for converting HTML into Markdown. This method simply calls HtmlToPlainText.markdown.
@@ -95,9 +104,11 @@ module HtmlToPlainText
   # @param html [String] The HTML to convert into Markdown.
   # @param show_links [Boolean] Whether to include link URLs and image sources in the output.
   # @param all_tables [Boolean] Whether to format all tables as data tables regardless of their markup.
+  # @param ignore_nav [Boolean] Whether to suppress navigational, header, and footer elements.
+  # @param selector [String, nil] A CSS selector limiting the output to matching elements.
   # @return [String] The Markdown approximation of the HTML.
-  def markdown(html, show_links: true, all_tables: false)
-    HtmlToPlainText.markdown(html, show_links: show_links, all_tables: all_tables)
+  def markdown(html, show_links: true, all_tables: false, ignore_nav: false, selector: nil)
+    HtmlToPlainText.markdown(html, show_links: show_links, all_tables: all_tables, ignore_nav: ignore_nav, selector: selector)
   end
 
   class << self
@@ -109,14 +120,34 @@ module HtmlToPlainText
     # @param all_tables [Boolean] Whether to format all tables as data tables regardless of their markup.
     #   By default only tables with a non-zero border attribute or a thead or tbody element are formatted
     #   as data tables; other tables are assumed to be for layout only.
+    # @param ignore_nav [Boolean] Whether to suppress navigational, header, and footer elements. When true,
+    #   header, footer, and nav tags are omitted from the output along with any elements that have a
+    #   role attribute of navigation, banner, or contentinfo.
+    # @param selector [String, nil] A CSS selector limiting the output to matching elements. Only the
+    #   contents of elements matching the selector are included in the output.
     # @return [String] The plain text approximation of the HTML.
-    def plain_text(html, show_links: true, markdown: false, all_tables: false)
+    def plain_text(html, show_links: true, markdown: false, all_tables: false, ignore_nav: false, selector: nil)
       return nil if html.nil?
-      return html.gsub(CARRIAGE_RETURN_PATTERN, NEWLINE).strip unless HTML_PATTERN.match?(html)
-      body = Nokogiri::HTML::Document.parse(html).xpath(BODY_TAG_XPATH).first
-      return +"" unless body
-      options = {show_links: show_links, markdown: markdown, all_tables: all_tables}
-      convert_node_to_plain_text(body, "", options).strip.gsub(CARRIAGE_RETURN_PATTERN, NEWLINE)
+      unless HTML_PATTERN.match?(html)
+        return +"" if selector
+        return html.gsub(CARRIAGE_RETURN_PATTERN, NEWLINE).strip
+      end
+      document = Nokogiri::HTML::Document.parse(html)
+      options = {show_links: show_links, markdown: markdown, all_tables: all_tables, ignore_nav: ignore_nav}
+      out = +""
+      if selector
+        elements = document.css(selector)
+        elements.each do |element|
+          next if element.ancestors.any? { |ancestor| elements.include?(ancestor) }
+          append_block_breaks(out)
+          convert_node_to_plain_text(element, out, options)
+        end
+      else
+        body = document.xpath(BODY_TAG_XPATH).first
+        return +"" unless body
+        convert_node_to_plain_text(body, out, options)
+      end
+      out.strip.gsub(CARRIAGE_RETURN_PATTERN, NEWLINE)
     end
 
     # Convert some HTML into a Markdown approximation. This is the same as calling plain_text
@@ -125,9 +156,11 @@ module HtmlToPlainText
     # @param html [String] The HTML to convert into Markdown.
     # @param show_links [Boolean] Whether to include link URLs and image sources in the output.
     # @param all_tables [Boolean] Whether to format all tables as data tables regardless of their markup.
+    # @param ignore_nav [Boolean] Whether to suppress navigational, header, and footer elements.
+    # @param selector [String, nil] A CSS selector limiting the output to matching elements.
     # @return [String] The Markdown approximation of the HTML.
-    def markdown(html, show_links: true, all_tables: false)
-      plain_text(html, show_links: show_links, markdown: true, all_tables: all_tables)
+    def markdown(html, show_links: true, all_tables: false, ignore_nav: false, selector: nil)
+      plain_text(html, show_links: show_links, markdown: true, all_tables: all_tables, ignore_nav: ignore_nav, selector: selector)
     end
 
     private
@@ -162,6 +195,7 @@ module HtmlToPlainText
         elsif node.name == PLAINTEXT
           out << node.text
         elsif node.element? && !IGNORE_TAGS.include?(node.name)
+          next if options[:ignore_nav] && ignore_nav_element?(node)
           trim_trailing_blanks!(out) if markdown && (node.name == BLOCKQUOTE || node.name == PRE)
           pos = out.length
           convert_node_to_plain_text(node, out, child_options(node, options))
@@ -205,6 +239,15 @@ module HtmlToPlainText
         end
       end
       out
+    end
+
+    # Determine if an element is a navigational element suppressed by the ignore_nav option.
+    # The role attribute can contain a space delimited list of roles.
+    def ignore_nav_element?(node)
+      return true if NAV_TAGS.include?(node.name)
+      role = node[ROLE]
+      return false unless role
+      role.downcase.split(ALL_WHITESPACE_PATTERN).any? { |value| NAV_ROLES.include?(value) }
     end
 
     # Set formatting options that will be passed to child elements for a tag.

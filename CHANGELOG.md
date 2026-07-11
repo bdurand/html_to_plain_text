@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `template`, `svg`, `math`, `canvas`, `audio`, `video`, `select`, and `textarea` tags are now stripped from the output.
 - The `main`, `figcaption`, `caption`, `summary`, `details`, `form`, `fieldset`, and `hgroup` tags are now formatted as block elements.
 - The `menu` tag is now formatted as a bulleted list.
+- New `ignore_nav` option to suppress non-content elements: `header`, `footer`, and `nav` tags along with any elements that have a `role` attribute of `navigation`, `banner`, or `contentinfo`.
+- New `selector` option to limit output to elements matching a CSS selector.
 
 ### Changed
 

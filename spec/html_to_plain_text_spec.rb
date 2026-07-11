@@ -133,6 +133,78 @@ RSpec.describe HtmlToPlainText do
     end
   end
 
+  describe "ignore_nav" do
+    it "keeps header, footer, and nav tags by default" do
+      html = "<header>head</header><nav>menu</nav><p>content</p><footer>foot</footer>"
+      expect(text(html)).to eq "head\nmenu\n\ncontent\n\nfoot"
+    end
+
+    it "suppresses header, footer, and nav tags with the ignore_nav option" do
+      html = "<header>head</header><nav>menu</nav><p>content</p><footer>foot</footer>"
+      expect(HtmlToPlainText.plain_text(html, ignore_nav: true)).to eq "content"
+    end
+
+    it "keeps aside tags with the ignore_nav option" do
+      html = "<p>content</p><aside>related</aside>"
+      expect(HtmlToPlainText.plain_text(html, ignore_nav: true)).to eq "content\n\nrelated"
+    end
+
+    it "suppresses elements with navigation, banner, and contentinfo roles" do
+      html = "<div role='banner'>head</div><div role='navigation'>menu</div><p>content</p><div role='contentinfo'>foot</div>"
+      expect(HtmlToPlainText.plain_text(html, ignore_nav: true)).to eq "content"
+    end
+
+    it "suppresses elements with a navigational role in a list of roles" do
+      html = "<div role='menu navigation'>menu</div><p>content</p>"
+      expect(HtmlToPlainText.plain_text(html, ignore_nav: true)).to eq "content"
+    end
+
+    it "keeps elements with other roles" do
+      html = "<div role='main'>content</div><div role='complementary'>related</div>"
+      expect(HtmlToPlainText.plain_text(html, ignore_nav: true)).to eq "content\nrelated"
+    end
+
+    it "suppresses navigational elements in markdown mode" do
+      html = "<nav>menu</nav><h1>Title</h1><footer>foot</footer>"
+      expect(markdown(html, ignore_nav: true)).to eq "# Title"
+    end
+  end
+
+  describe "selector" do
+    it "only includes elements matching a CSS selector" do
+      html = "<div>before</div><content>the content</content><div>after</div>"
+      expect(HtmlToPlainText.plain_text(html, selector: "content")).to eq "the content"
+    end
+
+    it "includes all matching elements separated by line breaks" do
+      html = "<content>one</content><div>skip</div><content>two</content>"
+      expect(HtmlToPlainText.plain_text(html, selector: "content")).to eq "one\ntwo"
+    end
+
+    it "does not duplicate the contents of nested matching elements" do
+      html = "<div><p>one</p><div><p>two</p></div></div>"
+      expect(HtmlToPlainText.plain_text(html, selector: "div")).to eq "one\n\ntwo"
+    end
+
+    it "returns an empty string when no elements match" do
+      expect(HtmlToPlainText.plain_text("<p>content</p>", selector: "article")).to eq ""
+    end
+
+    it "returns an empty string for non-html text" do
+      expect(HtmlToPlainText.plain_text("just text", selector: "p")).to eq ""
+    end
+
+    it "suppresses navigational elements inside selected elements with the ignore_nav option" do
+      html = "<article><nav>menu</nav><p>content</p></article><footer>foot</footer>"
+      expect(HtmlToPlainText.plain_text(html, selector: "article", ignore_nav: true)).to eq "content"
+    end
+
+    it "formats selected elements in markdown mode" do
+      html = "<div>before</div><article><h1>Title</h1><p><strong>bold</strong></p></article>"
+      expect(markdown(html, selector: "article")).to eq "# Title\n\n**bold**"
+    end
+  end
+
   it "ignores inline tags without bodies" do
     html = "This is an <img src=\"/image\"> image"
     expect(text(html)).to eq "This is an image"
