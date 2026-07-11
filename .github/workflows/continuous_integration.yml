@@ -29,7 +29,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
       - name: Ruby CI
-        uses: bdurand/github-actions/ruby-ci@main
+        uses: bdurand/github-actions/ruby-ci@v1.0.2
         with:
           ruby: ${{ matrix.ruby }}
           appraisal: ${{ matrix.appraisal }}
