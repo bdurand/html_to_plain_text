@@ -200,8 +200,17 @@ RSpec.describe HtmlToPlainText do
       expect(HtmlToPlainText.plain_text("<p>content</p>", selector: "article")).to eq ""
     end
 
-    it "returns an empty string for non-html text" do
-      expect(HtmlToPlainText.plain_text("just text", selector: "p")).to eq ""
+    it "returns an empty string when no elements match non-html text" do
+      expect(HtmlToPlainText.plain_text("just text", selector: "article")).to eq ""
+    end
+
+    it "applies the selector consistently to non-html text" do
+      expect(HtmlToPlainText.plain_text("just text", selector: "body")).to eq "just text"
+      expect(HtmlToPlainText.plain_text("text & more", selector: "body")).to eq "text & more"
+    end
+
+    it "raises an ArgumentError for an invalid CSS selector on non-html text" do
+      expect { HtmlToPlainText.plain_text("just text", selector: "div[") }.to raise_error(ArgumentError, /Invalid CSS selector/)
     end
 
     it "does not match elements outside of the body" do
@@ -297,6 +306,11 @@ RSpec.describe HtmlToPlainText do
     it "discards javascript and other non-link protocols" do
       expect(text("<a href='javascript:alert(1)'>click</a>")).to eq "click"
       expect(text("<a href=\"javascript:x\nhttp://y\">click</a>")).to eq "click"
+    end
+
+    it "discards multiline hrefs even when they start with a link protocol" do
+      expect(text("<a href=\"http://y/\njavascript:alert(1)\">click</a>")).to eq "click"
+      expect(markdown("<a href=\"http://y/\njavascript:alert(1)\">click</a>")).to eq "click"
     end
 
     it "ignores empty" do
@@ -457,12 +471,38 @@ RSpec.describe HtmlToPlainText do
       expect(markdown(html)).to eq "```\nx = 1\ny = 2\n```"
     end
 
+    it "extends the fence when the code block content contains backtick fences" do
+      expect(markdown("<pre>foo\n```\nbar</pre>")).to eq "````\nfoo\n```\nbar\n````"
+      expect(markdown("<pre>foo\n````\nbar</pre>")).to eq "`````\nfoo\n````\nbar\n`````"
+    end
+
     it "formats <hr> tags" do
       expect(markdown("Test<hr>More")).to eq "Test\n\n---\nMore"
     end
 
     it "formats <br> tags as hard line breaks" do
       expect(markdown("line1<br>line2")).to eq "line1\\\nline2"
+    end
+
+    it "does not leave a stray backslash when a <br> tag is followed by a blank line" do
+      expect(markdown("a<br><p>b</p>")).to eq "a\n\nb"
+      expect(markdown("a<br><br>b")).to eq "a\n\nb"
+      expect(markdown("<p>a<br></p>b")).to eq "a\n\nb"
+    end
+
+    it "does not leave a stray backslash when a <br> tag ends the output" do
+      expect(markdown("line1<br>")).to eq "line1"
+    end
+
+    it "does not leave a stray backslash when a <br> tag precedes a code block" do
+      expect(markdown("a<br><pre>x</pre>")).to eq "a\n\n```\nx\n```"
+      expect(markdown("<div>a<br><pre>x</pre></div>")).to eq "a\n```\nx\n```"
+    end
+
+    it "does not leave stray backslashes from <br> tags inside blockquotes" do
+      expect(markdown("<blockquote>a<br></blockquote>b")).to eq "> a\n\nb"
+      expect(markdown("<blockquote>a<br><p>b</p></blockquote>")).to eq "> a\n>\n> b"
+      expect(markdown("<blockquote>a<br>b</blockquote>")).to eq "> a\\\n> b"
     end
 
     it "formats bullet lists with nesting indented" do
@@ -487,6 +527,20 @@ RSpec.describe HtmlToPlainText do
     it "formats all tables with the all_tables option" do
       html = "<table><tr><td>1</td><td>2</td></tr></table>"
       expect(markdown(html, all_tables: true)).to eq "| 1 | 2 |\n| --- | --- |"
+    end
+
+    it "escapes pipes in data table cells" do
+      html = "<table border='1'><tr><th>a|b</th></tr><tr><td>1</td></tr></table>"
+      expect(markdown(html)).to eq "| a\\|b |\n| --- |\n| 1 |"
+    end
+
+    it "does not escape pipes in layout table cells" do
+      expect(markdown("<table><tr><td>a|b</td></tr></table>")).to eq "a|b"
+    end
+
+    it "keeps data table rows on a single line" do
+      html = "<table border='1'><tr><td>a<br>b</td><td><p>c</p><p>d</p></td></tr></table>"
+      expect(markdown(html)).to eq "| a b | c d |\n| --- | --- |"
     end
 
     it "does not apply markdown formatting inside pre tags" do
