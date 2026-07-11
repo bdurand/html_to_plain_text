@@ -57,6 +57,9 @@ module HtmlToPlainText
   TBODY = "tbody"
   NUMBERS = ["1", "a"].freeze
   LINK_URL_PATTERN = /\A(?:[a-z][a-z0-9.+-]*:\/\/[a-z0-9]|mailto:|tel:)/i
+  URI_SCHEME_PATTERN = /\A[a-z][a-z0-9.+-]*:/i
+  BRACKET_PATTERN = /[\[\]]/
+  BACKTICK_RUN_PATTERN = /`+/
   HTML_PATTERN = /[<&]/
   BODY_TAG_XPATH = "/html/body"
   FIRST_TR_XPATH = ".//tr"
@@ -84,6 +87,7 @@ module HtmlToPlainText
   MARKDOWN_QUOTE = "> "
   MARKDOWN_EMPTY_QUOTE = ">"
   MARKDOWN_BULLET = "- "
+  BACKTICK = "`"
   MARKDOWN_TABLE_SEPARATOR_CELL = " --- |"
 
   # Helper instance method for converting HTML into plain text. This method simply calls HtmlToPlainText.plain_text.
@@ -172,12 +176,15 @@ module HtmlToPlainText
       markdown = options[:markdown] && !options[:pre]
 
       unless markdown && MARKDOWN_INLINE_TAGS.include?(parent.name)
+        # The buffer tail here was written before this node opened, so it is only
+        # preformatted content when an ancestor (not this node itself) is a pre tag.
+        trim = !options[:pre] || parent.name == PRE
         if PARAGRAPH_TAGS.include?(parent.name)
-          append_paragraph_breaks(out)
+          append_paragraph_breaks(out, trim: trim)
           heading = (MARKDOWN_HEADING_TAGS[parent.name] if markdown)
           out << heading if heading
         elsif BLOCK_TAGS.include?(parent.name)
-          append_block_breaks(out)
+          append_block_breaks(out, trim: trim)
         end
       end
 
@@ -201,7 +208,7 @@ module HtmlToPlainText
           convert_node_to_plain_text(node, out, child_options(node, options))
 
           if node.name == BR
-            trim_trailing_blanks!(out)
+            trim_trailing_blanks!(out) unless options[:pre]
             out << if markdown && !out.empty? && !out.end_with?(NEWLINE)
               MARKDOWN_BR
             else
@@ -232,9 +239,10 @@ module HtmlToPlainText
             append_block_breaks(out)
             append_markdown_table_separator(out, node)
           elsif PARAGRAPH_TAGS.include?(node.name)
-            append_paragraph_breaks(out)
+            append_paragraph_breaks(out, trim: !options[:pre])
           elsif BLOCK_TAGS.include?(node.name)
-            append_block_breaks(out)
+            # A closing pre tag leaves preformatted content at the buffer tail.
+            append_block_breaks(out, trim: !options[:pre] && node.name != PRE)
           end
         end
       end
@@ -278,7 +286,7 @@ module HtmlToPlainText
         if stripped.empty? || stripped == href || stripped == href[NON_PROTOCOL_PATTERN, 1]
           out << content
         else
-          out << content[LEADING_WHITESPACE_PATTERN] << "[" << stripped << "](" << href << ")" << content[TRAILING_WHITESPACE_PATTERN]
+          out << content[LEADING_WHITESPACE_PATTERN] << "[" << escape_unbalanced_brackets(stripped) << "](" << href << ")" << content[TRAILING_WHITESPACE_PATTERN]
         end
       else
         text = node.text
@@ -300,16 +308,46 @@ module HtmlToPlainText
       if stripped.empty?
         out << content
       else
+        if marker == BACKTICK && stripped.include?(BACKTICK)
+          # A code span containing backticks needs a longer delimiter, padded with
+          # spaces if the content starts or ends with a backtick.
+          longest_run = stripped.scan(BACKTICK_RUN_PATTERN).max_by(&:length).length
+          marker = BACKTICK * (longest_run + 1)
+          stripped = "#{SPACE}#{stripped}#{SPACE}" if stripped.start_with?(BACKTICK) || stripped.end_with?(BACKTICK)
+        end
         out << content[LEADING_WHITESPACE_PATTERN] << marker << stripped << marker << content[TRAILING_WHITESPACE_PATTERN]
       end
     end
 
-    # Append a markdown image for an img tag.
+    # Append a markdown image for an img tag. Sources with a URI scheme are limited
+    # to the same protocols allowed for links.
     def append_markdown_image(out, node)
       src = node[SRC].to_s
       return if src.empty? || LINE_BREAK_PATTERN.match?(src)
+      return if URI_SCHEME_PATTERN.match?(src) && !LINK_URL_PATTERN.match?(src)
       alt = node[ALT].to_s.gsub(ALL_WHITESPACE_PATTERN, SPACE).strip
-      out << "![" << alt << "](" << src << ")"
+      out << "![" << escape_unbalanced_brackets(alt) << "](" << src << ")"
+    end
+
+    # Escape square brackets that are not part of a balanced pair so that the text
+    # is safe to use inside a markdown link or image label. Balanced pairs are left
+    # alone since they are valid inside a label.
+    def escape_unbalanced_brackets(text)
+      return text unless BRACKET_PATTERN.match?(text)
+      unmatched = []
+      open_brackets = []
+      text.each_char.with_index do |char, i|
+        if char == "["
+          open_brackets << i
+        elsif char == "]"
+          open_brackets.empty? ? unmatched << i : open_brackets.pop
+        end
+      end
+      unmatched.concat(open_brackets)
+      return text if unmatched.empty?
+      escaped = text.dup
+      unmatched.sort.reverse_each { |i| escaped.insert(i, "\\") }
+      escaped
     end
 
     # Rewrite the output generated by a blockquote element with each line prefixed by "> ".
@@ -349,8 +387,8 @@ module HtmlToPlainText
 
     # Add double line breaks between paragraph elements. If line breaks already exist,
     # new ones will only be added to get to two.
-    def append_paragraph_breaks(out)
-      trim_trailing_blanks!(out)
+    def append_paragraph_breaks(out, trim: true)
+      trim_trailing_blanks!(out) if trim
       if out.end_with?(NEWLINE)
         out << NEWLINE unless out.end_with?("\n\n")
       else
@@ -360,8 +398,8 @@ module HtmlToPlainText
 
     # Add a single line break between block elements. If a line break already exists,
     # none will be added.
-    def append_block_breaks(out)
-      trim_trailing_blanks!(out)
+    def append_block_breaks(out, trim: true)
+      trim_trailing_blanks!(out) if trim
       out << NEWLINE unless out.end_with?(NEWLINE)
     end
 
