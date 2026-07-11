@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `mailto:` and `tel:` link URLs are now included in the output when the link text differs from the address.
 - Return an empty string instead of `nil` when the parsed document has no body.
 - Line breaks are normalized and whitespace stripped on plain text input for consistency with HTML input.
+- Minimum required Ruby version is now 2.7.
 
 ### Fixed
 
