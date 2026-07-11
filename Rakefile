@@ -9,13 +9,13 @@ end
 require "bundler/gem_tasks"
 
 task :verify_release_branch do
-  unless `git rev-parse --abbrev-ref HEAD`.chomp == "master"
-    warn "Gem can only be released from the master branch"
+  unless `git rev-parse --abbrev-ref HEAD`.chomp == "main"
+    warn "Gem can only be released from the main branch"
     exit 1
   end
 end
 
-Rake::Task[:release].enhance([:verify_release_branch])
+Rake::Task[:release].prerequisites.prepend("verify_release_branch")
 
 require "rspec/core/rake_task"
 
