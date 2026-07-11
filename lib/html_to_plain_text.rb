@@ -170,10 +170,12 @@ module HtmlToPlainText
       else
         convert_node_to_plain_text(body, out, options)
       end
+      # String#strip removes null characters as well as whitespace, so a hard break
+      # marker at the end of the output is removed here along with any trailing newline.
       out = out.strip
       if markdown
-        # Hard break markers followed by a blank line or at the end of the output would
-        # leave a stray backslash, so they are removed; the rest become backslashes.
+        # Hard break markers followed by a blank line would leave a stray backslash,
+        # so they are removed; the rest become hard line break backslashes.
         out.gsub!(MARKDOWN_BR_BEFORE_BLANK_PATTERN, EMPTY)
         out.gsub!(MARKDOWN_BR_MARKER, MARKDOWN_HARD_BREAK)
       end
