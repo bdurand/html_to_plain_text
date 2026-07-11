@@ -44,6 +44,13 @@ HtmlToPlainText.markdown(html) # => "# Hello\n\nworld!"
 * `all_tables` (default `false`) - Format all tables as data tables. By default only tables with a non-zero
   `border` attribute or a `thead` or `tbody` element are formatted as data tables; other tables are assumed
   to be used for layout only and their cells are separated with spaces instead of "|" delimiters.
+* `ignore_nav` (default `false`) - Suppress non-content elements from the output. When set, `header`,
+  `footer`, and `nav` tags are omitted along with any elements that have a `role` attribute of
+  `navigation`, `banner`, or `contentinfo`.
+* `selector` (default `nil`) - A CSS selector limiting the output to matching elements. Only the contents
+  of elements matching the selector are included in the output (e.g. `selector: "#main, article"`). Only
+  elements within the body of the document are matched. An `ArgumentError` is raised if the selector is
+  not a valid CSS selector.
 
 ## Installation
 
