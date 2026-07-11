@@ -139,12 +139,15 @@ module HtmlToPlainText
       markdown = options[:markdown] && !options[:pre]
 
       unless markdown && MARKDOWN_INLINE_TAGS.include?(parent.name)
+        # The buffer tail here was written before this node opened, so it is only
+        # preformatted content when an ancestor (not this node itself) is a pre tag.
+        trim = !options[:pre] || parent.name == PRE
         if PARAGRAPH_TAGS.include?(parent.name)
-          append_paragraph_breaks(out)
+          append_paragraph_breaks(out, trim: trim)
           heading = (MARKDOWN_HEADING_TAGS[parent.name] if markdown)
           out << heading if heading
         elsif BLOCK_TAGS.include?(parent.name)
-          append_block_breaks(out)
+          append_block_breaks(out, trim: trim)
         end
       end
 
@@ -167,7 +170,7 @@ module HtmlToPlainText
           convert_node_to_plain_text(node, out, child_options(node, options))
 
           if node.name == BR
-            trim_trailing_blanks!(out)
+            trim_trailing_blanks!(out) unless options[:pre]
             out << if markdown && !out.empty? && !out.end_with?(NEWLINE)
               MARKDOWN_BR
             else
@@ -198,9 +201,10 @@ module HtmlToPlainText
             append_block_breaks(out)
             append_markdown_table_separator(out, node)
           elsif PARAGRAPH_TAGS.include?(node.name)
-            append_paragraph_breaks(out)
+            append_paragraph_breaks(out, trim: !options[:pre])
           elsif BLOCK_TAGS.include?(node.name)
-            append_block_breaks(out)
+            # A closing pre tag leaves preformatted content at the buffer tail.
+            append_block_breaks(out, trim: !options[:pre] && node.name != PRE)
           end
         end
       end
@@ -306,8 +310,8 @@ module HtmlToPlainText
 
     # Add double line breaks between paragraph elements. If line breaks already exist,
     # new ones will only be added to get to two.
-    def append_paragraph_breaks(out)
-      trim_trailing_blanks!(out)
+    def append_paragraph_breaks(out, trim: true)
+      trim_trailing_blanks!(out) if trim
       if out.end_with?(NEWLINE)
         out << NEWLINE unless out.end_with?("\n\n")
       else
@@ -317,8 +321,8 @@ module HtmlToPlainText
 
     # Add a single line break between block elements. If a line break already exists,
     # none will be added.
-    def append_block_breaks(out)
-      trim_trailing_blanks!(out)
+    def append_block_breaks(out, trim: true)
+      trim_trailing_blanks!(out) if trim
       out << NEWLINE unless out.end_with?(NEWLINE)
     end
 
