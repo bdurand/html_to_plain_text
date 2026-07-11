@@ -2,13 +2,13 @@ name: Continuous Integration
 on:
   push:
     branches:
-      - master
+      - main
       - actions-*
     tags:
       - v*
   pull_request:
-    branches:
-      - master
+    branches-ignore:
+      - actions-*
   workflow_dispatch:
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby:
+        include:
           - ruby: "ruby"
             standardrb: true
             yard: true
@@ -29,7 +29,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
       - name: Ruby CI
-        uses: bdurand/github-actions/ruby-ci@v1.0.1
+        uses: bdurand/github-actions/ruby-ci@v1.0.2
         with:
           ruby: ${{ matrix.ruby }}
           appraisal: ${{ matrix.appraisal }}

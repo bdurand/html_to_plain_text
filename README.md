@@ -16,6 +16,15 @@ A simple gem that provide code to convert HTML into a plain text alternative. Li
 * Formatting inside <pre> or <plaintext> elements will be honored
 * Code-like tags like <script> or <style> will be stripped
 
+HTML can also be converted to a Markdown approximation instead. In Markdown mode:
+
+* Headings are prefixed with # characters
+* Formatting tags like <strong>, <em>, <del>, and <code> are converted to Markdown markers
+* <a> tags become Markdown links and <img> tags become Markdown images
+* <blockquote> content is prefixed with "> "
+* <pre> blocks become fenced code blocks
+* Data tables are formatted as Markdown tables with a header separator row
+
 ## Usage
 
 ```ruby
@@ -23,7 +32,18 @@ require 'html_to_plain_text'
 
 html = "<h1>Hello</h1><p>world!</p>"
 HtmlToPlainText.plain_text(html) # => "Hello\n\nworld!"
+
+HtmlToPlainText.markdown(html) # => "# Hello\n\nworld!"
+# equivalent to HtmlToPlainText.plain_text(html, markdown: true)
 ```
+
+### Options
+
+* `show_links` (default `true`) - Include link URLs and image sources in the output.
+* `markdown` (default `false`) - Format the output as Markdown instead of plain text.
+* `all_tables` (default `false`) - Format all tables as data tables. By default only tables with a non-zero
+  `border` attribute or a `thead` or `tbody` element are formatted as data tables; other tables are assumed
+  to be used for layout only and their cells are separated with spaces instead of "|" delimiters.
 
 ## Installation
 
