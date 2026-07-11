@@ -48,7 +48,9 @@ HtmlToPlainText.markdown(html) # => "# Hello\n\nworld!"
   `footer`, and `nav` tags are omitted along with any elements that have a `role` attribute of
   `navigation`, `banner`, or `contentinfo`.
 * `selector` (default `nil`) - A CSS selector limiting the output to matching elements. Only the contents
-  of elements matching the selector are included in the output (e.g. `selector: "#main, article"`).
+  of elements matching the selector are included in the output (e.g. `selector: "#main, article"`). Only
+  elements within the body of the document are matched. An `ArgumentError` is raised if the selector is
+  not a valid CSS selector.
 
 ## Installation
 

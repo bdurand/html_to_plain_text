@@ -99,6 +99,7 @@ module HtmlToPlainText
   # @param ignore_nav [Boolean] Whether to suppress navigational, header, and footer elements.
   # @param selector [String, nil] A CSS selector limiting the output to matching elements.
   # @return [String] The plain text approximation of the HTML.
+  # @raise [ArgumentError] If the selector is not a valid CSS selector.
   def plain_text(html, show_links: true, markdown: false, all_tables: false, ignore_nav: false, selector: nil)
     HtmlToPlainText.plain_text(html, show_links: show_links, markdown: markdown, all_tables: all_tables, ignore_nav: ignore_nav, selector: selector)
   end
@@ -111,6 +112,7 @@ module HtmlToPlainText
   # @param ignore_nav [Boolean] Whether to suppress navigational, header, and footer elements.
   # @param selector [String, nil] A CSS selector limiting the output to matching elements.
   # @return [String] The Markdown approximation of the HTML.
+  # @raise [ArgumentError] If the selector is not a valid CSS selector.
   def markdown(html, show_links: true, all_tables: false, ignore_nav: false, selector: nil)
     HtmlToPlainText.markdown(html, show_links: show_links, all_tables: all_tables, ignore_nav: ignore_nav, selector: selector)
   end
@@ -128,8 +130,10 @@ module HtmlToPlainText
     #   header, footer, and nav tags are omitted from the output along with any elements that have a
     #   role attribute of navigation, banner, or contentinfo.
     # @param selector [String, nil] A CSS selector limiting the output to matching elements. Only the
-    #   contents of elements matching the selector are included in the output.
+    #   contents of elements matching the selector are included in the output. Only elements within
+    #   the body of the document are matched.
     # @return [String] The plain text approximation of the HTML.
+    # @raise [ArgumentError] If the selector is not a valid CSS selector.
     def plain_text(html, show_links: true, markdown: false, all_tables: false, ignore_nav: false, selector: nil)
       return nil if html.nil?
       unless HTML_PATTERN.match?(html)
@@ -139,16 +143,24 @@ module HtmlToPlainText
       document = Nokogiri::HTML::Document.parse(html)
       options = {show_links: show_links, markdown: markdown, all_tables: all_tables, ignore_nav: ignore_nav}
       out = +""
+      body = document.xpath(BODY_TAG_XPATH).first
+      return +"" unless body
       if selector
-        elements = document.css(selector)
+        begin
+          elements = document.css(selector)
+        rescue Nokogiri::CSS::SyntaxError => e
+          raise ArgumentError, "Invalid CSS selector: #{e.message}"
+        end
         elements.each do |element|
-          next if element.ancestors.any? { |ancestor| elements.include?(ancestor) }
+          ancestors = element.ancestors
+          # Only elements within the body are included, and nested matches are
+          # skipped since their content is already included by a matching ancestor.
+          next unless element == body || ancestors.include?(body)
+          next if ancestors.any? { |ancestor| elements.include?(ancestor) }
           append_block_breaks(out)
           convert_node_to_plain_text(element, out, options)
         end
       else
-        body = document.xpath(BODY_TAG_XPATH).first
-        return +"" unless body
         convert_node_to_plain_text(body, out, options)
       end
       out.strip.gsub(CARRIAGE_RETURN_PATTERN, NEWLINE)
@@ -163,6 +175,7 @@ module HtmlToPlainText
     # @param ignore_nav [Boolean] Whether to suppress navigational, header, and footer elements.
     # @param selector [String, nil] A CSS selector limiting the output to matching elements.
     # @return [String] The Markdown approximation of the HTML.
+    # @raise [ArgumentError] If the selector is not a valid CSS selector.
     def markdown(html, show_links: true, all_tables: false, ignore_nav: false, selector: nil)
       plain_text(html, show_links: show_links, markdown: true, all_tables: all_tables, ignore_nav: ignore_nav, selector: selector)
     end

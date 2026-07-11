@@ -204,6 +204,21 @@ RSpec.describe HtmlToPlainText do
       expect(HtmlToPlainText.plain_text("just text", selector: "p")).to eq ""
     end
 
+    it "does not match elements outside of the body" do
+      html = "<html><head><title>Page Title</title></head><body><p>content</p></body></html>"
+      expect(HtmlToPlainText.plain_text(html, selector: "title")).to eq ""
+    end
+
+    it "can match the body element itself" do
+      html = "<html><head><title>Page Title</title></head><body><p>content</p></body></html>"
+      expect(HtmlToPlainText.plain_text(html, selector: "body")).to eq "content"
+    end
+
+    it "raises an ArgumentError for an invalid CSS selector" do
+      expect { HtmlToPlainText.plain_text("<p>content</p>", selector: "div[") }.to raise_error(ArgumentError, /Invalid CSS selector/)
+      expect { HtmlToPlainText.plain_text("<p>content</p>", selector: "") }.to raise_error(ArgumentError, /Invalid CSS selector/)
+    end
+
     it "suppresses navigational elements inside selected elements with the ignore_nav option" do
       html = "<article><nav>menu</nav><p>content</p></article><footer>foot</footer>"
       expect(HtmlToPlainText.plain_text(html, selector: "article", ignore_nav: true)).to eq "content"
