@@ -511,8 +511,8 @@ module HtmlToPlainText
     # Find the table element containing a table row.
     def containing_table(tr)
       table = tr.parent
-      table = table.parent while table && table.name != TABLE
-      table
+      table = table.parent while table.is_a?(Nokogiri::XML::Element) && table.name != TABLE
+      table if table.is_a?(Nokogiri::XML::Element)
     end
   end
 end
