@@ -141,6 +141,16 @@ RSpec.describe HtmlToPlainText do
       html = "<table><tr><td>1</td><td>2</td></tr></table>"
       expect(HtmlToPlainText.plain_text(html, all_tables: true)).to eq "| 1 | 2 |"
     end
+
+    it "formats table rows without an enclosing table as a layout table" do
+      html = "<tr><td>1</td><td>2</td></tr>"
+      expect(text(html)).to eq "1 2"
+    end
+
+    it "formats nested table rows without an enclosing table" do
+      html = "<pre><div><tr><td>1</td></tr></div></pre>"
+      expect(text(html)).to eq "1"
+    end
   end
 
   describe "ignore_nav" do
