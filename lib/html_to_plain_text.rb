@@ -48,6 +48,7 @@ module HtmlToPlainText
   OL = "ol"
   UL = "ul"
   LI = "li"
+  P = "p"
   A = "a"
   IMG = "img"
   MENU = "menu"
@@ -209,7 +210,7 @@ module HtmlToPlainText
         # preformatted content when an ancestor (not this node itself) is a pre tag.
         trim = !options[:pre] || parent.name == PRE
         if PARAGRAPH_TAGS.include?(parent.name)
-          append_paragraph_breaks(out, trim: trim)
+          append_paragraph_breaks(out, trim: trim) unless list_item_edge_paragraph?(parent, :first)
           heading = (MARKDOWN_HEADING_TAGS[parent.name] if markdown)
           out << heading if heading
         elsif BLOCK_TAGS.include?(parent.name)
@@ -271,7 +272,7 @@ module HtmlToPlainText
             append_block_breaks(out)
             append_markdown_table_separator(out, node)
           elsif PARAGRAPH_TAGS.include?(node.name)
-            append_paragraph_breaks(out, trim: !options[:pre])
+            append_paragraph_breaks(out, trim: !options[:pre]) unless list_item_edge_paragraph?(node, :last)
           elsif BLOCK_TAGS.include?(node.name)
             # A closing pre tag leaves preformatted content at the buffer tail.
             append_block_breaks(out, trim: !options[:pre] && node.name != PRE)
@@ -279,6 +280,19 @@ module HtmlToPlainText
         end
       end
       out
+    end
+
+    # A paragraph that opens or closes a list item adds no breaks on that side, so
+    # <li><p>text</p></li> is formatted the same as <li>text</li>. Blank text and
+    # comments around the paragraph are not content.
+    def list_item_edge_paragraph?(node, edge)
+      return false unless node.name == P && node.parent&.name == LI
+      sibling = node
+      loop do
+        sibling = (edge == :first) ? sibling.previous_sibling : sibling.next_sibling
+        return true if sibling.nil?
+        return false unless sibling.comment? || sibling.blank?
+      end
     end
 
     # Determine if an element is a navigational element suppressed by the ignore_nav option.

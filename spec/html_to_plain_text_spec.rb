@@ -101,6 +101,16 @@ RSpec.describe HtmlToPlainText do
     expect(text(html)).to eq "List\n\n1. one\n2. two\n\na. a\nb. b\n\n3. three"
   end
 
+  it "formats paragraphs that wrap list item content like the bare content" do
+    html = "List<ul><li><p>one</p></li><li><p>two</p><ul><li><p>a</p></li></ul></li></ul><ol>\n<li>\n<p>three</p>\n</li></ol>"
+    expect(text(html)).to eq "List\n\n* one\n* two\n\n** a\n\n1. three"
+  end
+
+  it "keeps paragraph breaks between paragraphs inside a list item" do
+    html = "<ul><li><p>one</p><p>more</p></li><li>two</li></ul>"
+    expect(text(html)).to eq "* one\n\nmore\n* two"
+  end
+
   it "formats menu tags as bullet lists" do
     html = "List<menu><li>one</li><li>two</li></menu>"
     expect(text(html)).to eq "List\n\n* one\n* two"
@@ -508,6 +518,11 @@ RSpec.describe HtmlToPlainText do
     it "formats bullet lists with nesting indented" do
       html = "List<ul><li>one</li><li>two<ul><li>a</li><li>b</li></ul></li><li>three</li></ul>"
       expect(markdown(html)).to eq "List\n\n- one\n- two\n\n  - a\n  - b\n\n- three"
+    end
+
+    it "formats paragraphs that wrap list item content like the bare content" do
+      html = "<ul><li><p>one</p></li><li><p>two</p><ol><li><p>a</p></li></ol></li></ul>"
+      expect(markdown(html)).to eq "- one\n- two\n\n  1. a"
     end
 
     it "formats numbered lists with nesting indented" do
